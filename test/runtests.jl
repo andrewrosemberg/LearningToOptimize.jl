@@ -1,5 +1,6 @@
 using L2O
 using Test
+using DelimitedFiles
 using JuMP, HiGHS
 import ParametricOptInterface as POI
 
@@ -10,6 +11,11 @@ import ParametricOptInterface as POI
     @constraint(model, cons, x + _p >= 3)
     @objective(model, Min, 2x)
 
-    MOI.set(model, POI.ParameterValue(), p, 2.0)
-    optimize!(model)
+    problem_iterator = zip(1:10, (zip(p, 1.0) for i in 1:10))
+    recorder = CSVRecorder("test.csv", primal_variables=[:x], dual_variables=[:cons])
+    solve_batch(model, problem_iterator, recorder)
+    @test isfile("test.csv")
+    @test length(readdlm("test.csv", ',')[:, 1]) == 11
+    @test length(readdlm("test.csv", ',')[1, :]) == 3
+    rm("test.csv")
 end
