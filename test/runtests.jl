@@ -11,11 +11,12 @@ import ParametricOptInterface as POI
     @constraint(model, cons, x + _p >= 3)
     @objective(model, Min, 2x)
 
-    problem_iterator = zip(1:10, (zip(p, 1.0) for i in 1:10))
+    num_p = 10
+    problem_iterator = ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:num_p)))
     recorder = CSVRecorder("test.csv", primal_variables=[:x], dual_variables=[:cons])
     solve_batch(model, problem_iterator, recorder)
     @test isfile("test.csv")
-    @test length(readdlm("test.csv", ',')[:, 1]) == 11
+    @test length(readdlm("test.csv", ',')[:, 1]) == num_p+1
     @test length(readdlm("test.csv", ',')[1, :]) == 3
     rm("test.csv")
 end

@@ -7,6 +7,17 @@ mutable struct CSVRecorder <: Recorder
     filterfn::Function
 end
 
+struct ProblemIterator{T<:Real, Z<:Integer}
+    ids::Vector{Z}
+    pairs::Dict{VariableRef, Vector{T}}
+    function ProblemIterator(ids::Vector{Z}, pairs::Dict{VariableRef, Vector{T}}) where {T<:Real, Z<:Integer}
+        for (p, val) in pairs
+            @assert length(ids) == length(val)
+        end
+        return new{T, Z}(ids, pairs)
+    end
+end
+
 function record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
     if !isfile(recorder.filename)
         open(recorder.filename, "w") do f
@@ -46,24 +57,24 @@ function update_model!(model::JuMP.Model, p::VariableRef, val::AbstractArray{T})
     MOI.set(model, POI.ParameterValue(), p, val)
 end
 
-function update_model!(model::JuMP.Model, pairs::Union{Base.Iterators.Zip, Base.Iterators.Pairs})
+function update_model!(model::JuMP.Model, pairs::Dict, idx::Int64)
     for (p, val) in pairs
-        update_model!(model, p, val)
+        update_model!(model, p, val[idx])
     end
 end
 
-function solve_and_record(model::JuMP.Model, pairs::Union{Base.Iterators.Zip, Base.Iterators.Pairs}, recorder::Recorder, id::Int64)
-    update_model!(model, pairs)
+function solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Int64)
+    update_model!(model, problem_iterator.pairs, idx)
     optimize!(model)
     if recorder.filterfn(model)
-        record(recorder, model, id)
+        record(recorder, model, problem_iterator.ids[idx])
     end
     return nothing
 end
 
-function solve_batch(model::JuMP.Model, problem_iterator::Union{Base.Iterators.Zip, Base.Iterators.Pairs}, recorder::Recorder)
-    for (id, pairs) in problem_iterator
-        solve_and_record(model, pairs, recorder, id)
+function solve_batch(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder)
+    for idx in 1:length(problem_iterator.ids)
+        solve_and_record(model, problem_iterator, recorder, idx)
     end
     return nothing
 end
