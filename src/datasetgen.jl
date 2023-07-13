@@ -1,23 +1,18 @@
-"""
-    Recorder
-
-Abstract type for recorders of optimization problem solutions.
-"""
-abstract type Recorder end
+abstract type RecorderFile end
 
 """
-    CSVRecorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
+    Recorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
 
-Recorder type of optimization problem solutions to a CSV file.
+Recorder of optimization problem solutions.
 """
-mutable struct CSVRecorder <: Recorder
+mutable struct Recorder{T<:RecorderFile}
     filename::String
     primal_variables::AbstractArray{Symbol}
     dual_variables::AbstractArray{Symbol}
     filterfn::Function
 
-    function CSVRecorder(filename::String; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
-        return new(filename, primal_variables, dual_variables, filterfn)
+    function Recorder{T}(filename::String; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL) where T<:RecorderFile
+        return new{T}(filename, primal_variables, dual_variables, filterfn)
     end
 end
 
@@ -34,38 +29,6 @@ struct ProblemIterator{T<:Real, Z<:Integer}
             @assert length(ids) == length(val)
         end
         return new{T, Z}(ids, pairs)
-    end
-end
-
-"""
-    record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
-
-Record optimization problem solution to a CSV file.
-"""
-function record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
-    if !isfile(recorder.filename)
-        open(recorder.filename, "w") do f
-            write(f, "id")
-            for p in recorder.primal_variables
-                write(f, ",$p")
-            end
-            for p in recorder.dual_variables
-                write(f, ",dual_$p")
-            end
-            write(f, "\n")
-        end
-    end
-    open(recorder.filename, "a") do f
-        write(f, "$id")
-        for p in recorder.primal_variables
-            val = MOI.get(model, MOI.VariablePrimal(), model[p])
-            write(f, ",$val")
-        end
-        for p in recorder.dual_variables
-            val = MOI.get(model, MOI.ConstraintDual(), model[p])
-            write(f, ",$val")
-        end
-        write(f, "\n")
     end
 end
 
