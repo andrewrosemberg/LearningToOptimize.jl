@@ -1,12 +1,31 @@
+"""
+    Recorder
+
+Abstract type for recorders of optimization problem solutions.
+"""
 abstract type Recorder end
 
+"""
+    CSVRecorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
+
+Recorder type of optimization problem solutions to a CSV file.
+"""
 mutable struct CSVRecorder <: Recorder
     filename::String
     primal_variables::AbstractArray{Symbol}
     dual_variables::AbstractArray{Symbol}
     filterfn::Function
+
+    function CSVRecorder(filename::String; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
+        return new(filename, primal_variables, dual_variables, filterfn)
+    end
 end
 
+"""
+    ProblemIterator(ids::Vector{Integer}, pairs::Dict{VariableRef, Vector{Real}})
+
+Iterator for optimization problem instances.
+"""
 struct ProblemIterator{T<:Real, Z<:Integer}
     ids::Vector{Z}
     pairs::Dict{VariableRef, Vector{T}}
@@ -18,6 +37,11 @@ struct ProblemIterator{T<:Real, Z<:Integer}
     end
 end
 
+"""
+    record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
+
+Record optimization problem solution to a CSV file.
+"""
 function record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
     if !isfile(recorder.filename)
         open(recorder.filename, "w") do f
@@ -45,25 +69,41 @@ function record(recorder::CSVRecorder, model::JuMP.Model, id::Int64)
     end
 end
 
-function CSVRecorder(filename::String; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
-    return CSVRecorder(filename, primal_variables, dual_variables, filterfn)
-end
+"""
+    update_model!(model::JuMP.Model, p::VariableRef, val::Real)
 
+Update the value of a parameter in a JuMP model.
+"""
 function update_model!(model::JuMP.Model, p::VariableRef, val::T) where {T<:Real}
     MOI.set(model, POI.ParameterValue(), p, val)
 end
 
+"""
+    update_model!(model::JuMP.Model, p::VariableRef, val::AbstractArray{Real})
+
+Update the value of a parameter in a JuMP model.
+"""
 function update_model!(model::JuMP.Model, p::VariableRef, val::AbstractArray{T}) where {T<:Real}
     MOI.set(model, POI.ParameterValue(), p, val)
 end
 
-function update_model!(model::JuMP.Model, pairs::Dict, idx::Int64)
+"""
+    update_model!(model::JuMP.Model, pairs::Dict, idx::Integer)
+
+Update the values of parameters in a JuMP model.
+"""
+function update_model!(model::JuMP.Model, pairs::Dict, idx::Integer)
     for (p, val) in pairs
         update_model!(model, p, val[idx])
     end
 end
 
-function solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Int64)
+"""
+    solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer)
+
+Solve an optimization problem and record the solution.
+"""
+function solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer)
     update_model!(model, problem_iterator.pairs, idx)
     optimize!(model)
     if recorder.filterfn(model)
@@ -72,6 +112,11 @@ function solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, 
     return nothing
 end
 
+"""
+    solve_batch(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder)
+
+Solve a batch of optimization problems and record the solutions.
+"""
 function solve_batch(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder)
     for idx in 1:length(problem_iterator.ids)
         solve_and_record(model, problem_iterator, recorder, idx)
