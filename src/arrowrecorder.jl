@@ -3,15 +3,28 @@ abstract type ArrowFile <: RecorderFile end
 Base.string(::Type{ArrowFile}) = "arrow"
 
 """
-    record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::Int64)
+    record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T)
 
 Record optimization problem solution to an Arrow file.
 """
-function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::Int64)
+function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T) where {T<:Integer}
     if !isfile(recorder.filename)
-        ### NOT WORKING ###
-        Arrow.write(recorder.filename, (id = Int64[], recorder.primal_variables..., "dual_" .* recorder.dual_variables..., ))
+        Arrow.append(
+            recorder.filename, (;
+                id = T[], 
+                zip(recorder.primal_variables, fill(Float64[], length(recorder.primal_variables)))..., 
+                zip(Symbol.("dual_" .* string.(recorder.dual_variables)), fill(Float64[], length(recorder.dual_variables)))..., 
+            )
+        )
     end
 
-    Arrow.write(Arrow.Table(; id = [id], [MOI.get(model, MOI.VariablePrimal(), model[p]) for p in recorder.primal_variables]..., [MOI.get(model, MOI.ConstraintDual(), model[p]) for p in recorder.dual_variables]...) |> Arrow.Table, Arrow.append!(recorder.filename))
+    Arrow.append(
+        recorder.filename, (;
+            id = [id], 
+            zip(recorder.primal_variables, [[MOI.get(model, MOI.VariablePrimal(), model[p])] for p in recorder.primal_variables])..., 
+            zip(Symbol.("dual_" .* string.(recorder.dual_variables)), [[MOI.get(model, MOI.ConstraintDual(), model[p])] for p in recorder.dual_variables])..., 
+        )
+    )
+
+
 end
