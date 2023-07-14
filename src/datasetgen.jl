@@ -71,8 +71,9 @@ function solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, 
     optimize!(model)
     if recorder.filterfn(model)
         record(recorder, model, problem_iterator.ids[idx])
+        return 1
     end
-    return nothing
+    return 0
 end
 
 """
@@ -81,8 +82,5 @@ end
 Solve a batch of optimization problems and record the solutions.
 """
 function solve_batch(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder)
-    for idx in 1:length(problem_iterator.ids)
-        solve_and_record(model, problem_iterator, recorder, idx)
-    end
-    return nothing
+    return sum(solve_and_record(model, problem_iterator, recorder, idx) for idx in 1:length(problem_iterator.ids)) / length(problem_iterator.ids)
 end
