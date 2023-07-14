@@ -33,7 +33,7 @@ Then chose a type of recorder and what values to record:
 
 ```julia
 # CSV recorder to save the optimal primal and dual decision values
-recorder = CSVRecorder("test.csv", primal_variables=[:x], dual_variables=[:cons])
+recorder = Recorder{CSVFile}("test.csv", primal_variables=[:x], dual_variables=[:cons])
 
 # Finally solve all problems described by the iterator
 solve_batch(model, problem_iterator, recorder)
@@ -53,3 +53,9 @@ Which creates the following CSV:
 |  8 | -5.0 |       2.0 |
 |  9 | -6.0 |       2.0 |
 | 10 | -7.0 |       2.0 |
+
+Similarly, there is also the option to save the database in arrow files:
+
+```julia
+recorder = Recorder{ArrowFile}("test.arrow", primal_variables=[:x], dual_variables=[:cons])
+```
