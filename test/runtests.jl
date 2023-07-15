@@ -27,10 +27,14 @@ function testdataset_gen(path::String)
 
         # The problem iterator
         num_p = 10
+        @test_throws AssertionError ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:3.0)))
+        @test_throws MethodError ProblemIterator(collect(1.0:3.0), Dict(p => collect(1.0:3.0)))
         problem_iterator = ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:num_p)))
 
         # The recorder
         file = joinpath(path, "test.$(string(filetype))") # file path
+        @test Recorder{filetype}(file; primal_variables=[:x]) isa Recorder{filetype}
+        @test Recorder{filetype}(file; dual_variables=[:cons]) isa Recorder{filetype}
         recorder = Recorder{filetype}(file; primal_variables=[:x], dual_variables=[:cons])
 
         # Solve all problems and record solutions
