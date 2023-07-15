@@ -49,17 +49,17 @@ end
 
 @testset "L2O.jl" begin
     @testset "Dataset Generation" begin
-        # Different filetypes
         mktempdir() do path
+            # Different filetypes
             testdataset_gen(path)
-        end
-        # pglib
-        @testset "pg_lib case" begin
-            include(
-                joinpath(
-                    dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"
-                ),
-            )
+            # Pglib
+            @testset "pg_lib case" begin
+                include(
+                    joinpath(
+                        dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"
+                    ),
+                )
+            end
         end
     end
 end

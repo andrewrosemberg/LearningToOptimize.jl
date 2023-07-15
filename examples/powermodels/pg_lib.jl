@@ -78,7 +78,6 @@ function generate_dataset_pglib(
 end
 
 # Define test case from pglib
-data_dir = joinpath(dirname(@__FILE__), "data")
 case_name = "pglib_opf_case5_pjm.m"
 
 # Define number of problems
@@ -86,11 +85,11 @@ num_p = 10
 
 # Generate dataset
 success_solves, number_generators = generate_dataset_pglib(
-    data_dir, case_name; download_files=true, filetype=CSVFile, num_p=num_p
+    path, case_name; download_files=true, filetype=CSVFile, num_p=num_p
 )
 
 # Check if the number of successfull solves is equal to the number of problems saved
-file = joinpath(data_dir, "test.csv")
+file = joinpath(path, "test.csv")
 @test isfile(file)
 @test length(readdlm(file, ',')[:, 1]) == num_p * success_solves + 1
 @test length(readdlm(file, ',')[1, :]) == number_generators + 1
