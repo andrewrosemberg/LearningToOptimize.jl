@@ -19,19 +19,19 @@ function createvarrefs!(sp::JuMP.Model, pm::AbstractPowerModel)
 end
 
 """
-    generate_dataset_pglib(data_dir::String, case_name::String; download_files::Bool=true, filetype::Type{RecorderFile},
-    num_p=10
+    generate_dataset_pglib(data_dir::AbstractString, case_name::AbstractString; download_files::Bool=true, filetype::Type{RecorderFile},
+    num_p::Int=10
 )
 
 Generate dataset for pglib case_name with num_p problems and save it in data_dir
 """
 function generate_dataset_pglib(
-    data_dir::String,
-    case_name::String;
-    download_files::Bool=true,
-    filetype::Type{T},
+    data_dir,
+    case_name;
+    filetype=CSVFile,
+    download_files=true,
     num_p=10,
-) where {T<:L2O.RecorderFile}
+)
     case_file_path = joinpath(data_dir, case_name)
     if download_files && !isfile(case_file_path)
         Downloads.download(

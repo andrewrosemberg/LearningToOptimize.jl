@@ -5,6 +5,12 @@ using DelimitedFiles
 using JuMP, HiGHS
 import ParametricOptInterface as POI
 
+include(
+    joinpath(
+        dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"
+    ),
+)
+
 """
     testdataset_gen(path::String)
 
@@ -54,12 +60,6 @@ end
             testdataset_gen(path)
             # Pglib
             @testset "pg_lib case" begin
-                include(
-                    joinpath(
-                        dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"
-                    ),
-                )
-
                 # Define test case from pglib
                 case_name = "pglib_opf_case5_pjm.m"
 
@@ -68,7 +68,7 @@ end
 
                 # Generate dataset
                 success_solves, number_generators = generate_dataset_pglib(
-                    path, case_name; download_files=true, filetype=CSVFile, num_p=num_p
+                    path, case_name; num_p=num_p
                 )
 
                 # Check if the number of successfull solves is equal to the number of problems saved
