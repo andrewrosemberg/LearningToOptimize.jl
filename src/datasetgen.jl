@@ -44,18 +44,7 @@ end
 
 Update the value of a parameter in a JuMP model.
 """
-function update_model!(model::JuMP.Model, p::VariableRef, val::T) where {T<:Real}
-    return MOI.set(model, POI.ParameterValue(), p, val)
-end
-
-"""
-    update_model!(model::JuMP.Model, p::VariableRef, val::AbstractArray{Real})
-
-Update the value of a parameter in a JuMP model.
-"""
-function update_model!(
-    model::JuMP.Model, p::VariableRef, val::AbstractArray{T}
-) where {T<:Real}
+function update_model!(model::JuMP.Model, p::VariableRef, val)
     return MOI.set(model, POI.ParameterValue(), p, val)
 end
 
