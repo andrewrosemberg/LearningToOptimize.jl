@@ -25,7 +25,7 @@ function testdataset_gen(path::String)
 
         # The recorder
         file = joinpath(path, "test.$(string(filetype))") # file path
-        recorder = Recorder{filetype}(file, primal_variables=[:x], dual_variables=[:cons])
+        recorder = Recorder{filetype}(file; primal_variables=[:x], dual_variables=[:cons])
 
         # Solve all problems and record solutions
         solve_batch(model, problem_iterator, recorder)
@@ -34,7 +34,7 @@ function testdataset_gen(path::String)
         if filetype == CSVFile
             file1 = joinpath(path, "test.csv")
             @test isfile(file1)
-            @test length(readdlm(file1, ',')[:, 1]) == num_p+1
+            @test length(readdlm(file1, ',')[:, 1]) == num_p + 1
             @test length(readdlm(file1, ',')[1, :]) == 3
             rm(file1)
         else
@@ -55,7 +55,11 @@ end
         end
         # pglib
         @testset "pg_lib case" begin
-            include(joinpath(dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"))
+            include(
+                joinpath(
+                    dirname(dirname(@__FILE__)), "examples", "powermodels", "pg_lib.jl"
+                ),
+            )
         end
     end
 end
