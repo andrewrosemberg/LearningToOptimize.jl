@@ -7,7 +7,6 @@ import Base: string
 
 export ArrowFile, CSVFile, ProblemIterator, Recorder, solve_batch
 
-
 include("datasetgen.jl")
 include("csvrecorder.jl")
 include("arrowrecorder.jl")

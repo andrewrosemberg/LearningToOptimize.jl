@@ -9,12 +9,17 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 ParametricOptInterface = "0ce4ce61-57bf-432b-a095-efac525d185e"
 
 [compat]
-julia = "1"
+JuMP = "1"
+Arrow = "2"
+ParametricOptInterface = "0.5"
+julia = "1.6"
 
 [extras]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "DelimitedFiles", "HiGHS"]
+test = ["Test", "DelimitedFiles", "Downloads", "HiGHS", "PowerModels"]

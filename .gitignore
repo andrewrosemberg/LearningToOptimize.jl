@@ -5,3 +5,6 @@
 /docs/build/
 Manifest.toml
 /.vscode/*
+*.arrow
+*.m
+*.csv
