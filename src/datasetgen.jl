@@ -7,8 +7,8 @@ Recorder of optimization problem solutions.
 """
 mutable struct Recorder{T<:RecorderFile}
     filename::String
-    primal_variables::AbstractArray{Symbol}
-    dual_variables::AbstractArray{Symbol}
+    primal_variables::AbstractArray{VariableRef}
+    dual_variables::AbstractArray{ConstraintRef}
     filterfn::Function
 
     function Recorder{T}(

@@ -4,18 +4,12 @@ using JuMP, HiGHS
 import ParametricOptInterface as POI
 
 """
-    createvarrefs!(sp::JuMP.Model, pm::AbstractPowerModel)
+    return_variablerefs(pm::AbstractPowerModel)
 
-create ref for anonimous variables on model
+return all variablerefs on pm
 """
-function createvarrefs!(sp::JuMP.Model, pm::AbstractPowerModel)
-    for listvarref in values(PowerModels.var(pm))
-        for variableref in values(listvarref)
-            if typeof(variableref) == JuMP.VariableRef
-                sp[Symbol(name(variableref))] = variableref
-            end
-        end
-    end
+function return_variablerefs(pm::AbstractPowerModel)
+    return vcat([[variableref for variableref in values(listvarref) if typeof(variableref) == JuMP.VariableRef] for listvarref in values(PowerModels.var(pm))]...)
 end
 
 """
@@ -48,8 +42,11 @@ function generate_dataset_pglib(
     model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))
 
     # Save original load value and Link POI
-    original_load = network_data["load"]["1"]["pd"]
-    network_data["load"]["1"]["pd"] = p = @variable(model, _p in POI.Parameter(1.0))
+    original_load = [l["pd"] for l in values(network_data["load"])]
+    p = @variable(model, _p[i=1:length(network_data["load"])] in POI.Parameter.(original_load)) # vector of parameters
+    for (i,l) in enumerate(values(network_data["load"]))
+        l["pd"] = p[i]
+    end
 
     # Instantiate the model
     pm = instantiate_model(
@@ -62,18 +59,19 @@ function generate_dataset_pglib(
 
     # The problem iterator
     problem_iterator = ProblemIterator(
-        collect(1:num_p), Dict(p => collect(1.0:num_p) .* original_load)
+        collect(1:num_p), Dict(p .=> [collect(0.1:0.5:0.5 * num_p) * original_load[i] for i in 1:length(network_data["load"])])
     )
-
-    # Create ref for anonimous variables on model
-    createvarrefs!(model, pm)
 
     # Solve the problem and return the number of successfull solves
     file = joinpath(data_dir, "test.$(string(filetype))")
-    number_generators = length(network_data["gen"])
+    variable_refs = return_variablerefs(pm)
+    for variableref in variable_refs
+        set_name(variableref, replace(name(variableref), "," => "_"))
+    end
+    number_vars = length(variable_refs)
     recorder = Recorder{filetype}(
-        file; primal_variables=[Symbol("0_pg[$i]") for i in 1:number_generators]
+        file; primal_variables=variable_refs
     )
-    return solve_batch(model, problem_iterator, recorder), number_generators
+    return solve_batch(model, problem_iterator, recorder), number_vars
 end
 

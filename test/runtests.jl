@@ -33,9 +33,9 @@ function testdataset_gen(path::String)
 
         # The recorder
         file = joinpath(path, "test.$(string(filetype))") # file path
-        @test Recorder{filetype}(file; primal_variables=[:x]) isa Recorder{filetype}
-        @test Recorder{filetype}(file; dual_variables=[:cons]) isa Recorder{filetype}
-        recorder = Recorder{filetype}(file; primal_variables=[:x], dual_variables=[:cons])
+        @test Recorder{filetype}(file; primal_variables=[x]) isa Recorder{filetype}
+        @test Recorder{filetype}(file; dual_variables=[cons]) isa Recorder{filetype}
+        recorder = Recorder{filetype}(file; primal_variables=[x], dual_variables=[cons])
 
         # Solve all problems and record solutions
         solve_batch(model, problem_iterator, recorder)
@@ -71,7 +71,7 @@ end
                 num_p = 10
 
                 # Generate dataset
-                success_solves, number_generators = generate_dataset_pglib(
+                success_solves, number_variables = generate_dataset_pglib(
                     path, case_name; num_p=num_p
                 )
 
@@ -79,7 +79,7 @@ end
                 file = joinpath(path, "test.csv")
                 @test isfile(file)
                 @test length(readdlm(file, ',')[:, 1]) == num_p * success_solves + 1
-                @test length(readdlm(file, ',')[1, :]) == number_generators + 1
+                @test length(readdlm(file, ',')[1, :]) == number_variables + 1
                 rm(file)
             end
         end

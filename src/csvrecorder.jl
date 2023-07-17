@@ -12,10 +12,10 @@ function record(recorder::Recorder{CSVFile}, model::JuMP.Model, id::Int64)
         open(recorder.filename, "w") do f
             write(f, "id")
             for p in recorder.primal_variables
-                write(f, ",$p")
+                write(f, ",$(name(p))")
             end
             for p in recorder.dual_variables
-                write(f, ",dual_$p")
+                write(f, ",dual_$(name(p))")
             end
             write(f, "\n")
         end
@@ -23,11 +23,11 @@ function record(recorder::Recorder{CSVFile}, model::JuMP.Model, id::Int64)
     open(recorder.filename, "a") do f
         write(f, "$id")
         for p in recorder.primal_variables
-            val = MOI.get(model, MOI.VariablePrimal(), model[p])
+            val = value.(p)
             write(f, ",$val")
         end
         for p in recorder.dual_variables
-            val = MOI.get(model, MOI.ConstraintDual(), model[p])
+            val = dual.(p)
             write(f, ",$val")
         end
         write(f, "\n")
