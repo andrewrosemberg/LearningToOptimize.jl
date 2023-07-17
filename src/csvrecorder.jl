@@ -33,3 +33,7 @@ function record(recorder::Recorder{CSVFile}, model::JuMP.Model, id::Int64)
         write(f, "\n")
     end
 end
+
+function save(table::NamedTuple, filename::String, ::Type{CSVFile})
+    CSV.write(filename, table)
+end

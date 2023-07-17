@@ -63,7 +63,7 @@ function generate_dataset_pglib(
     )
 
     # Solve the problem and return the number of successfull solves
-    file = joinpath(data_dir, "test.$(string(filetype))")
+    file = joinpath(data_dir, case_name * "_output." * string(filetype))
     variable_refs = return_variablerefs(pm)
     for variableref in variable_refs
         set_name(variableref, replace(name(variableref), "," => "_"))
@@ -74,4 +74,3 @@ function generate_dataset_pglib(
     )
     return solve_batch(model, problem_iterator, recorder), number_vars
 end
-

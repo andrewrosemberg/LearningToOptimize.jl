@@ -39,6 +39,20 @@ struct ProblemIterator{T<:Real,Z<:Integer}
     end
 end
 
+function save(problem_iterator::ProblemIterator, filename::String, file_type::Type{T}) where {T<:RecorderFile}
+    save(
+        (;
+            id=problem_iterator.ids,
+            zip(
+                Symbol.(name.(keys(problem_iterator.pairs))),
+                values(problem_iterator.pairs)
+            )...,
+        ),
+        filename,
+        file_type,
+    )
+end
+
 """
     update_model!(model::JuMP.Model, p::VariableRef, val::Real)
 

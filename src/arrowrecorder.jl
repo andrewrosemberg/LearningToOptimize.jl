@@ -29,3 +29,7 @@ function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T) where {
         ),
     )
 end
+
+function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
+    Arrow.write(filename, table)
+end
