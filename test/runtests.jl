@@ -59,10 +59,12 @@ function testdataset_gen(path::String)
             df = Arrow.Table(file_input)
             @test length(df) == 2
             @test length(df[1]) == num_p
+            rm(file_input)
             # test output file
             df = Arrow.Table(file_output)
             @test length(df) == 3
             @test length(df[1]) == num_p
+            rm(file_output)
         end
     end
 end
@@ -81,9 +83,15 @@ end
                 num_p = 10
 
                 # Generate dataset
-                success_solves, number_variables = generate_dataset_pglib(
+                success_solves, number_variables, num_loads = generate_dataset_pglib(
                     path, case_name; num_p=num_p
                 )
+
+                # Check if problem iterator was saved
+                file = joinpath(path, case_name * "_input.csv")
+                @test isfile(file)
+                @test length(readdlm(file, ',')[:, 1]) == num_p + 1
+                @test length(readdlm(file, ',')[1, :]) == 1 + num_loads
 
                 # Check if the number of successfull solves is equal to the number of problems saved
                 file = joinpath(path, case_name * "_output.csv")

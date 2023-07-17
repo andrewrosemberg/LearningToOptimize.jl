@@ -1,6 +1,7 @@
 using Flux
 using CSV
 using DataFrames
+using L2O
 
 path = joinpath(pwd(), "examples", "powermodels")
 
@@ -19,12 +20,12 @@ success_solves, number_variables = generate_dataset_pglib(
 )
 
 # read input and output data
-input_data = CSV.read(case_name * "_input.csv", DataFrame)
-output_data = CSV.read(case_name * "_output.csv", DataFrame)
+input_data = CSV.read(joinpath(path, case_name * "_input.csv"), DataFrame)
+output_data = CSV.read(joinpath(path, case_name * "_output.csv"), DataFrame)
 
 # Separate input and output variables
-input_features = input_data[2:end, 2:end]
-output_variables = output_data[2:end, 2:end]
+output_variables = output_data[:, 2:end]
+input_features = input_data[output_data[:, 1], 2:end] # just use success solves
 
 # Define model
 model = Chain(
@@ -37,8 +38,8 @@ model = Chain(
 loss(x, y) = Flux.mse(model(x), y)
 
 # Convert the data to matrices
-input_features = Matrix(input_features)
-output_variables = Matrix(output_variables)
+input_features = Matrix(input_features)'
+output_variables = Matrix(output_variables)'
 
 # Define the optimizer
 optimizer = Flux.ADAM()

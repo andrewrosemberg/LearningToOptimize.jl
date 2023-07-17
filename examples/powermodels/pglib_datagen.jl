@@ -13,6 +13,17 @@ function return_variablerefs(pm::AbstractPowerModel)
 end
 
 """
+    load_sampler(original_load::T, num_p::Int, max_multiplier::T=3.0, min_multiplier::T=0.0, step_multiplier::T=0.1)
+
+Load sampling
+"""
+function load_sampler(original_load::T, num_p::Int; max_multiplier::T=1.5, min_multiplier::T=0.0, step_multiplier::T=0.1) where {T<:Real}
+    # Load sampling
+    load_samples = original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
+    return load_samples
+end
+
+"""
     generate_dataset_pglib(data_dir::AbstractString, case_name::AbstractString; download_files::Bool=true, filetype::Type{RecorderFile},
     num_p::Int=10
 )
@@ -25,6 +36,7 @@ function generate_dataset_pglib(
     filetype=CSVFile,
     download_files=true,
     num_p=10,
+    load_sampler=load_sampler,
 )
     case_file_path = joinpath(data_dir, case_name)
     if download_files && !isfile(case_file_path)
@@ -59,8 +71,9 @@ function generate_dataset_pglib(
 
     # The problem iterator
     problem_iterator = ProblemIterator(
-        collect(1:num_p), Dict(p .=> [collect(0.1:0.5:0.5 * num_p) * original_load[i] for i in 1:length(network_data["load"])])
+        collect(1:num_p), Dict(p .=> [load_sampler(original_load[i], num_p) for i in 1:length(network_data["load"])])
     )
+    save(problem_iterator, joinpath(data_dir, case_name * "_input." * string(filetype)), filetype)
 
     # Solve the problem and return the number of successfull solves
     file = joinpath(data_dir, case_name * "_output." * string(filetype))
@@ -72,5 +85,5 @@ function generate_dataset_pglib(
     recorder = Recorder{filetype}(
         file; primal_variables=variable_refs
     )
-    return solve_batch(model, problem_iterator, recorder), number_vars
+    return solve_batch(model, problem_iterator, recorder), number_vars, length(original_load)
 end
