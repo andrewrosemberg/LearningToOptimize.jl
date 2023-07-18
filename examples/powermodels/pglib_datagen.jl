@@ -17,7 +17,7 @@ end
 
 Load sampling
 """
-function load_sampler(original_load::T, num_p::Int; max_multiplier::T=1.5, min_multiplier::T=0.0, step_multiplier::T=0.1) where {T<:Real}
+function load_sampler(original_load::T, num_p::Int; max_multiplier::T=2.5, min_multiplier::T=0.0, step_multiplier::T=0.1) where {T<:Real}
     # Load sampling
     load_samples = original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
     return load_samples

@@ -30,7 +30,7 @@ include(
 @testset "L2O.jl" begin
     mktempdir() do path
         testdataset_gen(path)
-        file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm.m", 10)
+        file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm.m", 20)
         test_flux_forecaster(file_in, file_out)
     end
 end

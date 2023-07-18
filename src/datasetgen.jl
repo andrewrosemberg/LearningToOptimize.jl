@@ -98,8 +98,11 @@ Solve a batch of optimization problems and record the solutions.
 function solve_batch(
     model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder
 )
-    return sum(
+    successfull_solves = sum(
         solve_and_record(model, problem_iterator, recorder, idx) for
         idx in 1:length(problem_iterator.ids)
     ) / length(problem_iterator.ids)
+    
+    @info "Recorded $(successfull_solves * 100) % of $(length(problem_iterator.ids)) problems"
+    return successfull_solves
 end
