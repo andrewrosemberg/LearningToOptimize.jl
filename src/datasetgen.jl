@@ -39,13 +39,14 @@ struct ProblemIterator{T<:Real,Z<:Integer}
     end
 end
 
-function save(problem_iterator::ProblemIterator, filename::String, file_type::Type{T}) where {T<:RecorderFile}
-    save(
+function save(
+    problem_iterator::ProblemIterator, filename::String, file_type::Type{T}
+) where {T<:RecorderFile}
+    return save(
         (;
             id=problem_iterator.ids,
             zip(
-                Symbol.(name.(keys(problem_iterator.pairs))),
-                values(problem_iterator.pairs)
+                Symbol.(name.(keys(problem_iterator.pairs))), values(problem_iterator.pairs)
             )...,
         ),
         filename,
@@ -98,11 +99,12 @@ Solve a batch of optimization problems and record the solutions.
 function solve_batch(
     model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder
 )
-    successfull_solves = sum(
-        solve_and_record(model, problem_iterator, recorder, idx) for
-        idx in 1:length(problem_iterator.ids)
-    ) / length(problem_iterator.ids)
-    
+    successfull_solves =
+        sum(
+            solve_and_record(model, problem_iterator, recorder, idx) for
+            idx in 1:length(problem_iterator.ids)
+        ) / length(problem_iterator.ids)
+
     @info "Recorded $(successfull_solves * 100) % of $(length(problem_iterator.ids)) problems"
     return successfull_solves
 end

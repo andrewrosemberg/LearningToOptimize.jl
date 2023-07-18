@@ -14,22 +14,16 @@ function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T) where {
             id=[id],
             zip(
                 Symbol.(name.(recorder.primal_variables)),
-                [
-                    [value.(p)] for
-                    p in recorder.primal_variables
-                ],
+                [[value.(p)] for p in recorder.primal_variables],
             )...,
             zip(
                 Symbol.("dual_" .* name.(recorder.dual_variables)),
-                [
-                    [dual.(p)] for
-                    p in recorder.dual_variables
-                ],
+                [[dual.(p)] for p in recorder.dual_variables],
             )...,
         ),
     )
 end
 
 function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
-    Arrow.write(filename, table)
+    return Arrow.write(filename, table)
 end

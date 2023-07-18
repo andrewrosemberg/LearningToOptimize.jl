@@ -9,7 +9,14 @@ import ParametricOptInterface as POI
 return all variablerefs on pm
 """
 function return_variablerefs(pm::AbstractPowerModel)
-    return vcat([[variableref for variableref in values(listvarref) if typeof(variableref) == JuMP.VariableRef] for listvarref in values(PowerModels.var(pm))]...)
+    return vcat(
+        [
+            [
+                variableref for
+                variableref in values(listvarref) if typeof(variableref) == JuMP.VariableRef
+            ] for listvarref in values(PowerModels.var(pm))
+        ]...,
+    )
 end
 
 """
@@ -17,9 +24,16 @@ end
 
 Load sampling
 """
-function load_sampler(original_load::T, num_p::Int; max_multiplier::T=2.5, min_multiplier::T=0.0, step_multiplier::T=0.1) where {T<:Real}
+function load_sampler(
+    original_load::T,
+    num_p::Int;
+    max_multiplier::T=2.5,
+    min_multiplier::T=0.0,
+    step_multiplier::T=0.1,
+) where {T<:Real}
     # Load sampling
-    load_samples = original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
+    load_samples =
+        original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
     return load_samples
 end
 
@@ -55,8 +69,10 @@ function generate_dataset_pglib(
 
     # Save original load value and Link POI
     original_load = [l["pd"] for l in values(network_data["load"])]
-    p = @variable(model, _p[i=1:length(network_data["load"])] in POI.Parameter.(original_load)) # vector of parameters
-    for (i,l) in enumerate(values(network_data["load"]))
+    p = @variable(
+        model, _p[i=1:length(network_data["load"])] in POI.Parameter.(original_load)
+    ) # vector of parameters
+    for (i, l) in enumerate(values(network_data["load"]))
         l["pd"] = p[i]
     end
 
@@ -71,9 +87,19 @@ function generate_dataset_pglib(
 
     # The problem iterator
     problem_iterator = ProblemIterator(
-        collect(1:num_p), Dict(p .=> [load_sampler(original_load[i], num_p) for i in 1:length(network_data["load"])])
+        collect(1:num_p),
+        Dict(
+            p .=> [
+                load_sampler(original_load[i], num_p) for
+                i in 1:length(network_data["load"])
+            ],
+        ),
     )
-    save(problem_iterator, joinpath(data_dir, case_name * "_input." * string(filetype)), filetype)
+    save(
+        problem_iterator,
+        joinpath(data_dir, case_name * "_input." * string(filetype)),
+        filetype,
+    )
 
     # Solve the problem and return the number of successfull solves
     file = joinpath(data_dir, case_name * "_output." * string(filetype))
@@ -82,10 +108,10 @@ function generate_dataset_pglib(
         set_name(variableref, replace(name(variableref), "," => "_"))
     end
     number_vars = length(variable_refs)
-    recorder = Recorder{filetype}(
-        file; primal_variables=variable_refs
-    )
-    return solve_batch(model, problem_iterator, recorder), number_vars, length(original_load)
+    recorder = Recorder{filetype}(file; primal_variables=variable_refs)
+    return solve_batch(model, problem_iterator, recorder),
+    number_vars,
+    length(original_load)
 end
 
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)

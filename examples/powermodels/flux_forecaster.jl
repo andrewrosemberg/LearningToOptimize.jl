@@ -17,7 +17,7 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         model = Chain(
             Dense(size(input_features, 2), 64, relu),
             Dense(64, 32, relu),
-            Dense(32, size(output_variables, 2))
+            Dense(32, size(output_variables, 2)),
         )
 
         # Define loss function
@@ -31,7 +31,9 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         optimizer = Flux.ADAM()
 
         # Train the model
-        Flux.train!(loss, Flux.params(model), [(input_features, output_variables)], optimizer)
+        Flux.train!(
+            loss, Flux.params(model), [(input_features, output_variables)], optimizer
+        )
 
         # Make predictions
         predictions = model(input_features)

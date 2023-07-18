@@ -15,8 +15,12 @@ function testdataset_gen(path::AbstractString)
 
         # The problem iterator
         num_p = 10
-        @test_throws AssertionError ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:3.0)))
-        @test_throws MethodError ProblemIterator(collect(1.0:3.0), Dict(p => collect(1.0:3.0)))
+        @test_throws AssertionError ProblemIterator(
+            collect(1:num_p), Dict(p => collect(1.0:3.0))
+        )
+        @test_throws MethodError ProblemIterator(
+            collect(1.0:3.0), Dict(p => collect(1.0:3.0))
+        )
         problem_iterator = ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:num_p)))
         file_input = joinpath(path, "test_input.$(string(filetype))") # file path
         save(problem_iterator, file_input, filetype)
@@ -26,7 +30,9 @@ function testdataset_gen(path::AbstractString)
         file_output = joinpath(path, "test_output.$(string(filetype))") # file path
         @test Recorder{filetype}(file_output; primal_variables=[x]) isa Recorder{filetype}
         @test Recorder{filetype}(file_output; dual_variables=[cons]) isa Recorder{filetype}
-        recorder = Recorder{filetype}(file_output; primal_variables=[x], dual_variables=[cons])
+        recorder = Recorder{filetype}(
+            file_output; primal_variables=[x], dual_variables=[cons]
+        )
 
         # Solve all problems and record solutions
         solve_batch(model, problem_iterator, recorder)
