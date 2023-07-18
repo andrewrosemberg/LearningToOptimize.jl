@@ -3,11 +3,11 @@ abstract type CSVFile <: RecorderFile end
 Base.string(::Type{CSVFile}) = "csv"
 
 """
-    record(recorder::Recorder{CSVFile}, model::JuMP.Model, id::Int64)
+    record(recorder::Recorder{CSVFile}, id::UUID)
 
 Record optimization problem solution to a CSV file.
 """
-function record(recorder::Recorder{CSVFile}, model::JuMP.Model, id::Int64)
+function record(recorder::Recorder{CSVFile}, id::UUID)
     if !isfile(recorder.filename)
         open(recorder.filename, "w") do f
             write(f, "id")

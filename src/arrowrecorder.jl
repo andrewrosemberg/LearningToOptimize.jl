@@ -3,11 +3,11 @@ abstract type ArrowFile <: RecorderFile end
 Base.string(::Type{ArrowFile}) = "arrow"
 
 """
-    record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T)
+    record(recorder::Recorder{ArrowFile}, id::UUID)
 
 Record optimization problem solution to an Arrow file.
 """
-function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T) where {T<:Integer}
+function record(recorder::Recorder{ArrowFile}, id::UUID)
     return Arrow.append(
         recorder.filename,
         (;

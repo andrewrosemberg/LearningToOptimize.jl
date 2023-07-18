@@ -3,6 +3,7 @@ module L2O
 using Arrow
 using CSV
 using JuMP
+using UUIDs
 import ParametricOptInterface as POI
 import Base: string
 

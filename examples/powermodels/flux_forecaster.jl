@@ -10,8 +10,8 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         output_data = CSV.read(file_out, DataFrame)
 
         # Separate input and output variables
-        output_variables = output_data[:, 2:end]
-        input_features = input_data[output_data[:, 1], 2:end] # just use success solves
+        output_variables = output_data[!, Not(:id)]
+        input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
         # Define model
         model = Chain(
@@ -38,5 +38,9 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         # Make predictions
         predictions = model(input_features)
         @test predictions isa Matrix
+
+        # Delete the files
+        rm(file_in)
+        rm(file_out)
     end
 end
