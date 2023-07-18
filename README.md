@@ -21,14 +21,11 @@ p = @variable(model, p in POI.Parameter(1.0)) # The parameter (defined using POI
 @constraint(model, cons, x + p >= 3)
 @objective(model, Min, 2x)
 
-# The ids
-problem_ids = collect(1:10)
-
 # The parameter values
 parameter_values = Dict(p => collect(1.0:10.0))
 
 # The iterator
-problem_iterator = ProblemIterator(problem_ids, parameter_values)
+problem_iterator = ProblemIterator(parameter_values)
 ```
 
 The parameter values of the problem iterator can be saved by simply:
@@ -51,6 +48,8 @@ Which creates the following CSV:
 |  8 | 8.0 |
 |  9 | 9.0 |
 | 10 | 10.0|
+
+ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs. 
 
 ### The Recorder
 
@@ -79,6 +78,8 @@ Which creates the following CSV:
 |  9 | -6.0 |       2.0 |
 | 10 | -7.0 |       2.0 |
 
+ps.: Ditto id's.
+
 Similarly, there is also the option to save the database in arrow files:
 
 ```julia
@@ -95,8 +96,8 @@ input_data = CSV.read("input_file.csv", DataFrame)
 output_data = CSV.read("output_file.csv", DataFrame)
 
 # Separate input and output variables
-output_variables = output_data[:, 2:end]
-input_features = input_data[output_data[:, 1], 2:end] # just use success solves
+output_variables = output_data[!, Not(:id)]
+input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
 # Define model
 model = Chain(
