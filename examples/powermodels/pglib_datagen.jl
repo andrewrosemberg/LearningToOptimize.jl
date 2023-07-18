@@ -87,7 +87,6 @@ function generate_dataset_pglib(
 
     # The problem iterator
     problem_iterator = ProblemIterator(
-        collect(1:num_p),
         Dict(
             p .=> [
                 load_sampler(original_load[i], num_p) for

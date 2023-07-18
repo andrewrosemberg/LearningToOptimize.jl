@@ -1,10 +1,12 @@
-using L2O
 using Arrow
-using Test
 using DelimitedFiles
-using JuMP, HiGHS
-import ParametricOptInterface as POI
 using Flux
+using HiGHS
+using JuMP
+using L2O
+import ParametricOptInterface as POI
+using Test
+using UUIDs
 
 const test_dir = dirname(@__FILE__)
 const examples_dir = joinpath(test_dir, "..", "examples")

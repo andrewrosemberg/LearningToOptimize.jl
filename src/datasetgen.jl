@@ -22,23 +22,33 @@ mutable struct Recorder{T<:RecorderFile}
 end
 
 """
-    ProblemIterator(ids::Vector{Integer}, pairs::Dict{VariableRef, Vector{Real}})
+    ProblemIterator(ids::Vector{UUID}, pairs::Dict{VariableRef, Vector{Real}})
 
 Iterator for optimization problem instances.
 """
-struct ProblemIterator{T<:Real,Z<:Integer}
-    ids::Vector{Z}
+struct ProblemIterator{T<:Real}
+    ids::Vector{UUID}
     pairs::Dict{VariableRef,Vector{T}}
     function ProblemIterator(
-        ids::Vector{Z}, pairs::Dict{VariableRef,Vector{T}}
-    ) where {T<:Real,Z<:Integer}
+        ids::Vector{UUID}, pairs::Dict{VariableRef,Vector{T}}
+    ) where {T<:Real}
         for (p, val) in pairs
             @assert length(ids) == length(val)
         end
-        return new{T,Z}(ids, pairs)
+        return new{T}(ids, pairs)
     end
 end
 
+function ProblemIterator(pairs::Dict{VariableRef,Vector{T}}) where {T<:Real}
+    ids = [uuid1() for _ in 1:length(first(values(pairs)))]
+    return ProblemIterator(ids, pairs)
+end
+
+"""
+    save(problem_iterator::ProblemIterator, filename::String, file_type::Type{T})
+
+Save optimization problem instances to a file.
+"""
 function save(
     problem_iterator::ProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:RecorderFile}
@@ -85,7 +95,7 @@ function solve_and_record(
     update_model!(model, problem_iterator.pairs, idx)
     optimize!(model)
     if recorder.filterfn(model)
-        record(recorder, model, problem_iterator.ids[idx])
+        record(recorder, problem_iterator.ids[idx])
         return 1
     end
     return 0

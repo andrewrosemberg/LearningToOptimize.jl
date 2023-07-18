@@ -16,12 +16,12 @@ function testdataset_gen(path::AbstractString)
         # The problem iterator
         num_p = 10
         @test_throws AssertionError ProblemIterator(
-            collect(1:num_p), Dict(p => collect(1.0:3.0))
+            [uuid1() for _ in 1:num_p], Dict(p => collect(1.0:3.0))
         )
         @test_throws MethodError ProblemIterator(
             collect(1.0:3.0), Dict(p => collect(1.0:3.0))
         )
-        problem_iterator = ProblemIterator(collect(1:num_p), Dict(p => collect(1.0:num_p)))
+        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)))
         file_input = joinpath(path, "test_input.$(string(filetype))") # file path
         save(problem_iterator, file_input, filetype)
         @test isfile(file_input)
