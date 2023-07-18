@@ -87,3 +87,23 @@ function generate_dataset_pglib(
     )
     return solve_batch(model, problem_iterator, recorder), number_vars, length(original_load)
 end
+
+function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
+    file_in = joinpath(path, case_name * "_input.csv")
+    file_out = joinpath(path, case_name * "_output.csv")
+    @testset "Dataset Generation pglib case" begin
+        success_solves, number_variables, number_loads = generate_dataset_pglib(
+            path, case_name; num_p=num_p
+        )
+        # Check if problem iterator was saved
+        @test isfile(file_in)
+        @test length(readdlm(file_in, ',')[:, 1]) == num_p + 1
+        @test length(readdlm(file_in, ',')[1, :]) == 1 + number_loads
+
+        # Check if the number of successfull solves is equal to the number of problems saved
+        @test isfile(file_out)
+        @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 1
+    end
+    return file_in, file_out
+end
