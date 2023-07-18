@@ -7,8 +7,8 @@ Recorder of optimization problem solutions.
 """
 mutable struct Recorder{T<:RecorderFile}
     filename::String
-    primal_variables::AbstractArray{Symbol}
-    dual_variables::AbstractArray{Symbol}
+    primal_variables::AbstractArray{VariableRef}
+    dual_variables::AbstractArray{ConstraintRef}
     filterfn::Function
 
     function Recorder{T}(
@@ -37,6 +37,21 @@ struct ProblemIterator{T<:Real,Z<:Integer}
         end
         return new{T,Z}(ids, pairs)
     end
+end
+
+function save(
+    problem_iterator::ProblemIterator, filename::String, file_type::Type{T}
+) where {T<:RecorderFile}
+    return save(
+        (;
+            id=problem_iterator.ids,
+            zip(
+                Symbol.(name.(keys(problem_iterator.pairs))), values(problem_iterator.pairs)
+            )...,
+        ),
+        filename,
+        file_type,
+    )
 end
 
 """
@@ -84,8 +99,12 @@ Solve a batch of optimization problems and record the solutions.
 function solve_batch(
     model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder
 )
-    return sum(
-        solve_and_record(model, problem_iterator, recorder, idx) for
-        idx in 1:length(problem_iterator.ids)
-    ) / length(problem_iterator.ids)
+    successfull_solves =
+        sum(
+            solve_and_record(model, problem_iterator, recorder, idx) for
+            idx in 1:length(problem_iterator.ids)
+        ) / length(problem_iterator.ids)
+
+    @info "Recorded $(successfull_solves * 100) % of $(length(problem_iterator.ids)) problems"
+    return successfull_solves
 end

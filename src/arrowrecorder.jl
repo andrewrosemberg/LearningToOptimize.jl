@@ -13,19 +13,17 @@ function record(recorder::Recorder{ArrowFile}, model::JuMP.Model, id::T) where {
         (;
             id=[id],
             zip(
-                recorder.primal_variables,
-                [
-                    [MOI.get(model, MOI.VariablePrimal(), model[p])] for
-                    p in recorder.primal_variables
-                ],
+                Symbol.(name.(recorder.primal_variables)),
+                [[value.(p)] for p in recorder.primal_variables],
             )...,
             zip(
-                Symbol.("dual_" .* string.(recorder.dual_variables)),
-                [
-                    [MOI.get(model, MOI.ConstraintDual(), model[p])] for
-                    p in recorder.dual_variables
-                ],
+                Symbol.("dual_" .* name.(recorder.dual_variables)),
+                [[dual.(p)] for p in recorder.dual_variables],
             )...,
         ),
     )
+end
+
+function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
+    return Arrow.write(filename, table)
 end
