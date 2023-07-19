@@ -52,11 +52,12 @@ function generate_dataset_pglib(
     num_p=10,
     load_sampler=load_sampler,
 )
-    case_file_path = joinpath(data_dir, case_name)
+    matpower_case_name = case_name * ".m"
+    case_file_path = joinpath(data_dir, matpower_case_name)
     if download_files && !isfile(case_file_path)
         Downloads.download(
             "https://raw.githubusercontent.com/power-grid-lib/pglib-opf/01681386d084d8bd03b429abcd1ee6966f68b9a3/" *
-            case_name,
+            matpower_case_name,
             case_file_path,
         )
     end
@@ -94,14 +95,15 @@ function generate_dataset_pglib(
             ],
         ),
     )
+    batch_id = string(uuid1())
     save(
         problem_iterator,
-        joinpath(data_dir, case_name * "_input." * string(filetype)),
+        joinpath(data_dir, case_name * "_input_" * batch_id * "." * string(filetype)),
         filetype,
     )
 
     # Solve the problem and return the number of successfull solves
-    file = joinpath(data_dir, case_name * "_output." * string(filetype))
+    file = joinpath(data_dir, case_name * "_output_" * batch_id * "." * string(filetype))
     variable_refs = return_variablerefs(pm)
     for variableref in variable_refs
         set_name(variableref, replace(name(variableref), "," => "_"))
@@ -110,16 +112,17 @@ function generate_dataset_pglib(
     recorder = Recorder{filetype}(file; primal_variables=variable_refs)
     return solve_batch(model, problem_iterator, recorder),
     number_vars,
-    length(original_load)
+    length(original_load),
+    batch_id
 end
 
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
-    file_in = joinpath(path, case_name * "_input.csv")
-    file_out = joinpath(path, case_name * "_output.csv")
     @testset "Dataset Generation pglib case" begin
-        success_solves, number_variables, number_loads = generate_dataset_pglib(
+        success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(
             path, case_name; num_p=num_p
         )
+        file_in = joinpath(path, case_name * "_input_" * batch_id * ".csv")
+        file_out = joinpath(path, case_name * "_output_" * batch_id * ".csv")
         # Check if problem iterator was saved
         @test isfile(file_in)
         @test length(readdlm(file_in, ',')[:, 1]) == num_p + 1
@@ -129,6 +132,7 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
         @test length(readdlm(file_out, ',')[1, :]) == number_variables + 1
+
+        return file_in, file_out
     end
-    return file_in, file_out
 end
