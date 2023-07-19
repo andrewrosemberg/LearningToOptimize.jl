@@ -4,16 +4,19 @@ TestEnv.activate()
 using Arrow
 using Flux
 using DataFrames
+using PowerModels
 
 # Paths
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_name = "pglib_opf_case5_pjm"
 filetype = ArrowFile
+network_formulation = DCPPowerModel
+case_file_path = joinpath(path, case_name, string(network_formulation))
 
 # Load input and output data tables
-iter_files = readdir(joinpath(path_dataset, case_name))
-file_ins = [joinpath(path_dataset, case_name, file) for file in iter_files if occursin("input", file)]
-file_outs = [joinpath(path_dataset, case_name, file) for file in iter_files if occursin("output", file)]
+iter_files = readdir(joinpath(case_file_path))
+file_ins = [joinpath(case_file_path, file) for file in iter_files if occursin("input", file)]
+file_outs = [joinpath(case_file_path, file) for file in iter_files if occursin("output", file)]
 batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 
 # Load input and output data tables
@@ -70,4 +73,3 @@ predictions = model(input_features_test)
 
 # Calculate the error
 error = Flux.mse(predictions,output_variables_test)
-

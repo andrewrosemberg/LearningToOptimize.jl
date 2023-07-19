@@ -51,7 +51,9 @@ function generate_dataset_pglib(
     download_files=true,
     num_p=10,
     load_sampler=load_sampler,
+    network_formulation=DCPPowerModel,
 )
+    # Download file
     matpower_case_name = case_name * ".m"
     case_file_path = joinpath(data_dir, matpower_case_name)
     if download_files && !isfile(case_file_path)
@@ -62,11 +64,18 @@ function generate_dataset_pglib(
         )
     end
 
+    # save folder
+    data_sim_dir = joinpath(data_dir, string(network_formulation))
+    if !isdir(data_sim_dir)
+        mkdir(data_sim_dir)
+    end
+
     # Read data
     network_data = PowerModels.parse_file(case_file_path)
 
     # The problem to iterate over
     model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))
+    MOI.set(model, MOI.Silent(), true)
 
     # Save original load value and Link POI
     original_load = [l["pd"] for l in values(network_data["load"])]
@@ -80,7 +89,7 @@ function generate_dataset_pglib(
     # Instantiate the model
     pm = instantiate_model(
         network_data,
-        DCPPowerModel,
+        network_formulation,
         PowerModels.build_opf;
         setting=Dict("output" => Dict("duals" => true)),
         jump_model=model,
@@ -99,12 +108,12 @@ function generate_dataset_pglib(
     @info "Batch ID: $batch_id"
     save(
         problem_iterator,
-        joinpath(data_dir, case_name * "_input_" * batch_id * "." * string(filetype)),
+        joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype)),
         filetype,
     )
 
     # Solve the problem and return the number of successfull solves
-    file = joinpath(data_dir, case_name * "_output_" * batch_id * "." * string(filetype))
+    file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
     variable_refs = return_variablerefs(pm)
     for variableref in variable_refs
         set_name(variableref, replace(name(variableref), "," => "_"))
@@ -119,11 +128,12 @@ end
 
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
     @testset "Dataset Generation pglib case" begin
+        network_formulation = DCPPowerModel
         success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(
-            path, case_name; num_p=num_p
+            path, case_name; num_p=num_p, network_formulation=network_formulation
         )
-        file_in = joinpath(path, case_name * "_input_" * batch_id * ".csv")
-        file_out = joinpath(path, case_name * "_output_" * batch_id * ".csv")
+        file_in = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv")
+        file_out = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv")
         # Check if problem iterator was saved
         @test isfile(file_in)
         @test length(readdlm(file_in, ',')[:, 1]) == num_p + 1
