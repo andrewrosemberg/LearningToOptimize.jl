@@ -72,4 +72,4 @@ Flux.train!(
 predictions = model(input_features_test)
 
 # Calculate the error
-error = Flux.mse(predictions,output_variables_test)
+error = Flux.mse(predictions, output_variables_test)
