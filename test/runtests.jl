@@ -15,7 +15,7 @@ include(joinpath(test_dir, "datasetgen.jl"))
 
 include(joinpath(examples_dir, "powermodels", "pglib_datagen.jl"))
 
-include(joinpath(examples_dir, "flux", "flux_forecaster.jl"))
+include(joinpath(examples_dir, "flux", "test_flux_forecaster.jl"))
 
 @testset "L2O.jl" begin
     mktempdir() do path

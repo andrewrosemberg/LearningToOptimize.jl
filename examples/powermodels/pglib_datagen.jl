@@ -96,6 +96,7 @@ function generate_dataset_pglib(
         ),
     )
     batch_id = string(uuid1())
+    @info "Batch ID: $batch_id"
     save(
         problem_iterator,
         joinpath(data_dir, case_name * "_input_" * batch_id * "." * string(filetype)),

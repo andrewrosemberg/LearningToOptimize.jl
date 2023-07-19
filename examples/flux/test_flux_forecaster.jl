@@ -1,7 +1,6 @@
 using Flux
 using CSV
 using DataFrames
-using L2O
 
 function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
     @testset "Flux.jl" begin

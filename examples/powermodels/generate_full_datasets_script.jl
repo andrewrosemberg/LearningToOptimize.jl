@@ -2,11 +2,7 @@ using TestEnv
 TestEnv.activate()
 
 using Arrow
-using Flux
-using HiGHS
-using JuMP
 using L2O
-import ParametricOptInterface as POI
 using Test
 using UUIDs
 
@@ -17,7 +13,7 @@ include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
 num_batches = 2
-num_p = 10
+num_p = 1000
 filetype = ArrowFile
 
 # Case name
@@ -39,9 +35,3 @@ for i in 1:num_batches
 end
 success_solves /= num_batches
 
-# Load input and output data tables
-file_ins = [joinpath(case_file_path, case_name * "_input_" * batch_id * "." * string(filetype)) for batch_id in batch_ids]
-file_outs = [joinpath(case_file_path, case_name * "_output_" * batch_id * "." * string(filetype)) for batch_id in batch_ids]
-
-input_table = Arrow.Table(file_ins)
-output_table = Arrow.Table(file_outs)
