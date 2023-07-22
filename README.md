@@ -6,6 +6,10 @@ Learning to optimize (L2O) package that provides basic functionalities to help f
 [![Build Status](https://github.com/andrewrosemberg/L2O.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/andrewrosemberg/L2O.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/andrewrosemberg/L2O.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/andrewrosemberg/L2O.jl)
 
+# Flowchart Summary
+
+![flowchart](https://github.com/andrewrosemberg/L2O.jl/blob/main/docs/L2O.png)
+
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
 
