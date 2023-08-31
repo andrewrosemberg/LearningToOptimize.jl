@@ -52,10 +52,12 @@ function generate_dataset_pglib(
     num_p=10,
     load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
+    solver = () -> POI.Optimizer(HiGHS.Optimizer()),
 )
     # Download file
     matpower_case_name = case_name * ".m"
     case_file_path = joinpath(data_dir, matpower_case_name)
+    mkpath(data_dir)
     if download_files && !isfile(case_file_path)
         Downloads.download(
             "https://raw.githubusercontent.com/power-grid-lib/pglib-opf/01681386d084d8bd03b429abcd1ee6966f68b9a3/" *
@@ -74,7 +76,7 @@ function generate_dataset_pglib(
     network_data = PowerModels.parse_file(case_file_path)
 
     # The problem to iterate over
-    model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))
+    model = Model(solver)
     MOI.set(model, MOI.Silent(), true)
 
     # Save original load value and Link POI
