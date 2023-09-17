@@ -25,6 +25,7 @@ Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Clarabel = "61c947e1-3e6d-4ee4-985a-eec8c727bd6e"
 
 [targets]
-test = ["Test", "DelimitedFiles", "Downloads", "HiGHS", "PowerModels", "Flux", "DataFrames"]
+test = ["Test", "DelimitedFiles", "Downloads", "HiGHS", "PowerModels", "Flux", "DataFrames", "Clarabel"]
