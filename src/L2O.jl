@@ -8,7 +8,8 @@ using UUIDs
 import ParametricOptInterface as POI
 import Base: string
 
-export ArrowFile, CSVFile, ProblemIterator, Recorder, save, solve_batch, WorstCaseProblemIterator
+export ArrowFile, CSVFile, ProblemIterator, Recorder, save, solve_batch, 
+    WorstCaseProblemIterator, set_primal_variable!, set_dual_variable!
 
 include("datasetgen.jl")
 include("csvrecorder.jl")

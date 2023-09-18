@@ -37,7 +37,7 @@ function set_primal_variable!(recorder::Recorder, p::Vector{VariableRef})
     recorder.primal_variables = p
 end
 
-function set_dual_variable!(recorder::Recorder, p::Vector{ConstraintRef})
+function set_dual_variable!(recorder::Recorder, p::Vector)
     recorder.dual_variables = p
 end
 

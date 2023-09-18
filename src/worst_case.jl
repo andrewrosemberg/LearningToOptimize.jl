@@ -77,7 +77,7 @@ function solve_and_record(
     load_var_dual = JuMP.all_variables(jump_dual_model)[load_dual_idxs]
 
     # Add constraints to the dual associated with the parameters
-    problem_iterator.set_iterator!(jump_dual_model, parameters, idx)
+    problem_iterator.set_iterator!(jump_dual_model, load_var_dual, idx)
 
     # Get the objective function
     obj = objective_function(jump_dual_model)
@@ -101,7 +101,7 @@ function solve_and_record(
 
     # Create final primal model and solve
     model = JuMP.Model(problem_iterator.optimizer)
-    problem_iterator.primal_builder!(jump_dual_model, optimal_loads; recorder=recorder)
+    problem_iterator.primal_builder!(model, optimal_loads; recorder=recorder)
     JuMP.optimize!(model)
 
     # Check if method was effective
