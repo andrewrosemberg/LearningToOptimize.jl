@@ -20,8 +20,8 @@ Recorder of optimization problem solutions.
 mutable struct Recorder{T<:FileType}
     recorder_file::RecorderFile{T}
     recorder_file_input::RecorderFile{T}
-    primal_variables::Vector{VariableRef}
-    dual_variables::Vector{ConstraintRef}
+    primal_variables::Vector
+    dual_variables::Vector
     filterfn::Function
 
     function Recorder{T}(
@@ -39,7 +39,7 @@ filename(recorder::Recorder) = filename(recorder.recorder_file)
 
 filename_input(recorder::Recorder) = filename(recorder.recorder_file_input)
 
-function set_primal_variable!(recorder::Recorder, p::Vector{VariableRef})
+function set_primal_variable!(recorder::Recorder, p::Vector)
     recorder.primal_variables = p
 end
 
