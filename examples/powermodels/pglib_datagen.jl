@@ -113,7 +113,7 @@ function generate_dataset_pglib(
     end
     number_vars = length(variable_refs)
     recorder = Recorder{filetype}(file; primal_variables=variable_refs)
-    return solve_batch(model, problem_iterator, recorder),
+    return solve_batch(problem_iterator, recorder),
     number_vars,
     length(original_load),
     batch_id
@@ -135,7 +135,7 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 1
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
 
         return file_in, file_out
     end

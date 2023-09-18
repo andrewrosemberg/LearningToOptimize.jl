@@ -8,6 +8,13 @@ Base.string(::Type{ArrowFile}) = "arrow"
 Record optimization problem solution to an Arrow file.
 """
 function record(recorder::Recorder{ArrowFile}, id::UUID)
+    model = if length(recorder.primal_variables) > 0
+        owner_model(recorder.primal_variables[1])
+    elseif length(recorder.dual_variables) > 0
+        owner_model(recorder.dual_variables[1])
+    else
+        @error("Recorder has no variables")
+    end
     return Arrow.append(
         recorder.filename,
         (;
@@ -20,6 +27,7 @@ function record(recorder::Recorder{ArrowFile}, id::UUID)
                 Symbol.("dual_" .* name.(recorder.dual_variables)),
                 [[dual.(p)] for p in recorder.dual_variables],
             )...,
+            objective=[JuMP.objective_value(model)],
         ),
     )
 end

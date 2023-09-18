@@ -1,7 +1,7 @@
 name = "L2O"
 uuid = "e1d8bfa7-c465-446a-84b9-451470f6e76c"
 authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
-version = "1.0.0-DEV"
+version = "1.2.0-DEV"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
@@ -14,6 +14,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [compat]
 Arrow = "2"
 CSV = "0.10"
+Dualization = "0.5"
 JuMP = "1"
 ParametricOptInterface = "0.5"
 julia = "1.6"

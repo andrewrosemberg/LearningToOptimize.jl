@@ -21,21 +21,25 @@ mutable struct Recorder{T<:RecorderFile}
     end
 end
 
+abstract type AbstractProblemIterator end
+
 """
     ProblemIterator(ids::Vector{UUID}, pairs::Dict{VariableRef, Vector{Real}})
 
 Iterator for optimization problem instances.
 """
-struct ProblemIterator{T<:Real}
+struct ProblemIterator{T<:Real} <: AbstractProblemIterator
+    model::JuMP.Model
     ids::Vector{UUID}
     pairs::Dict{VariableRef,Vector{T}}
     function ProblemIterator(
         ids::Vector{UUID}, pairs::Dict{VariableRef,Vector{T}}
     ) where {T<:Real}
+        model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
             @assert length(ids) == length(val)
         end
-        return new{T}(ids, pairs)
+        return new{T}(model, ids, pairs)
     end
 end
 
@@ -85,13 +89,14 @@ function update_model!(model::JuMP.Model, pairs::Dict, idx::Integer)
 end
 
 """
-    solve_and_record(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer)
+    solve_and_record(problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer)
 
 Solve an optimization problem and record the solution.
 """
 function solve_and_record(
-    model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer
+    problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer
 )
+    model = problem_iterator.model
     update_model!(model, problem_iterator.pairs, idx)
     optimize!(model)
     if recorder.filterfn(model)
@@ -102,16 +107,16 @@ function solve_and_record(
 end
 
 """
-    solve_batch(model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder)
+    solve_batch(problem_iterator::ProblemIterator, recorder::Recorder)
 
 Solve a batch of optimization problems and record the solutions.
 """
 function solve_batch(
-    model::JuMP.Model, problem_iterator::ProblemIterator, recorder::Recorder
+    problem_iterator::ProblemIterator, recorder::Recorder
 )
     successfull_solves =
         sum(
-            solve_and_record(model, problem_iterator, recorder, idx) for
+            solve_and_record(problem_iterator, recorder, idx) for
             idx in 1:length(problem_iterator.ids)
         ) / length(problem_iterator.ids)
 

@@ -35,7 +35,7 @@ function testdataset_gen(path::AbstractString)
         )
 
         # Solve all problems and record solutions
-        solve_batch(model, problem_iterator, recorder)
+        solve_batch(problem_iterator, recorder)
 
         # Check if file exists and has the correct number of rows and columns
         @test isfile(file_output)
@@ -46,7 +46,7 @@ function testdataset_gen(path::AbstractString)
             rm(file_input)
             # test output file
             @test length(readdlm(file_output, ',')[:, 1]) == num_p + 1
-            @test length(readdlm(file_output, ',')[1, :]) == 3
+            @test length(readdlm(file_output, ',')[1, :]) == 4
             rm(file_output)
         else
             # test input file
@@ -56,7 +56,7 @@ function testdataset_gen(path::AbstractString)
             rm(file_input)
             # test output file
             df = Arrow.Table(file_output)
-            @test length(df) == 3
+            @test length(df) == 4
             @test length(df[1]) == num_p
             rm(file_output)
         end
