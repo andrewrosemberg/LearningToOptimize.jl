@@ -18,7 +18,9 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             for p in recorder.dual_variables
                 write(f, ",dual_$(name(p))")
             end
-            write(f, ",objective")
+            if !input
+                write(f, ",objective")
+            end
             write(f, "\n")
         end
     end
@@ -40,8 +42,10 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
         else
             @error("Recorder has no variables")
         end
-        obj = JuMP.objective_value(model)
-        write(f, ",$obj")
+        if !input
+            obj = JuMP.objective_value(model)
+            write(f, ",$obj")
+        end
         # end line
         write(f, "\n")
     end

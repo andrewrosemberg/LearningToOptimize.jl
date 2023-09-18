@@ -17,20 +17,25 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
     else
         @error("Recorder has no variables")
     end
+
+    df = (;
+        id=[id],
+        zip(
+            Symbol.(name.(recorder.primal_variables)),
+            [[value.(p)] for p in recorder.primal_variables],
+        )...,
+        zip(
+            Symbol.("dual_" .* name.(recorder.dual_variables)),
+            [[dual.(p)] for p in recorder.dual_variables],
+        )...,
+    )
+    if !input
+        df=merge(df, (;objective=[JuMP.objective_value(model)]))
+    end
+    
     return Arrow.append(
         _filename,
-        (;
-            id=[id],
-            zip(
-                Symbol.(name.(recorder.primal_variables)),
-                [[value.(p)] for p in recorder.primal_variables],
-            )...,
-            zip(
-                Symbol.("dual_" .* name.(recorder.dual_variables)),
-                [[dual.(p)] for p in recorder.dual_variables],
-            )...,
-            objective=[JuMP.objective_value(model)],
-        ),
+        df,
     )
 end
 

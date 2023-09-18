@@ -5,7 +5,7 @@
 Test dataset generation using the worst case problem iterator for different filetypes.
 """
 function test_worst_case_problem_iterator(path::AbstractString)
-    @testset "Dataset Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
+    @testset "Worst Case Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
         # The problem to iterate over
         optimizer = () -> Ipopt.Optimizer()
         parameter_factory = (model) -> [@variable(model, _p)]

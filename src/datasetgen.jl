@@ -6,6 +6,12 @@ end
 
 filename(recorder_file::RecorderFile) = recorder_file.filename
 
+termination_status_filter(status) = status == MOI.OPTIMAL || status == MOI.SLOW_PROGRESS || status == MOI.LOCALLY_SOLVED || status == MOI.ITERATION_LIMIT
+primal_status_filter(status) = status == MOI.FEASIBLE_POINT
+dual_status_filter(status) = status == MOI.FEASIBLE_POINT
+
+filter_fn(model) = termination_status_filter(termination_status(model)) && primal_status_filter(primal_status(model)) && dual_status_filter(dual_status(model))
+
 """
     Recorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
 
@@ -23,7 +29,7 @@ mutable struct Recorder{T<:FileType}
         filename_input::String=filename * "_input_",
         primal_variables=[],
         dual_variables=[],
-        filterfn=(model) -> termination_status(model) == MOI.OPTIMAL,
+        filterfn=filter_fn,
     ) where {T<:FileType}
         return new{T}(RecorderFile{T}(filename), RecorderFile{T}(filename_input), primal_variables, dual_variables, filterfn)
     end
