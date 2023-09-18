@@ -57,7 +57,7 @@ function solve_and_record(
     problem_iterator.primal_builder!(model, parameters)
     
     # Parameter indices
-    load_moi_idx = MOI.VariableIndex[i.index for i in parameters]
+    load_moi_idx =  JuMP.index.(parameters)
 
     # Dualize the model
     dual_st = Dualization.dualize(JuMP.backend(model), 

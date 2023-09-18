@@ -99,9 +99,6 @@ function generate_dataset_pglib(
     network_formulation=DCPPowerModel,
     solver = () -> POI.Optimizer(HiGHS.Optimizer()),
 )
-    # Download file
-    matpower_case_name = case_name * ".m"
-
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
     if !isdir(data_sim_dir)
@@ -109,6 +106,7 @@ function generate_dataset_pglib(
     end
 
     # Read data
+    matpower_case_name = case_name * ".m"
     network_data = make_basic_network(pglib(matpower_case_name))
 
     # The problem to iterate over
@@ -152,6 +150,65 @@ function generate_dataset_pglib(
         batch_id
 end
 
+function generate_worst_case_dataset(data_dir,
+    case_name;
+    filetype=CSVFile,
+    num_p=10,
+    network_formulation=DCPPowerModel,
+    optimizer = () -> Ipopt.Optimizer(),
+)
+    # save folder
+    data_sim_dir = joinpath(data_dir, string(network_formulation))
+    if !isdir(data_sim_dir)
+        mkdir(data_sim_dir)
+    end
+
+    # Read data
+    matpower_case_name = case_name * ".m"
+    network_data = make_basic_network(pglib(matpower_case_name))
+
+    # Parameter factory
+    num_loads = length(network_data["load"])
+    original_load = vcat(
+        [l["pd"] for l in values(network_data["load"])],
+        [l["qd"] for l in values(network_data["load"])],
+    )
+    parameter_factory = (model) -> load_parameter_factory(model, 1:(num_loads * 2))
+
+    # Define batch id
+    batch_id = string(uuid1())
+    @info "Batch ID: $batch_id"
+
+    # Build model
+    primal_builder! = (model, parameters; recorder=nothing) -> pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=recorder)
+
+    # Set iterator
+    set_iterator! = (model, parameters, idx) -> load_set_iterator!(model, parameters, idx, original_load)
+
+    # The problem iterator
+    problem_iterator = WorstCaseProblemIterator(
+        [uuid1() for _ in 1:num_p],
+        parameter_factory,
+        primal_builder!,
+        set_iterator!,
+        optimizer,
+    )
+
+    # File names
+    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
+    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    recorder = Recorder{filetype}(
+        file_output; filename_input=file_input,
+        primal_variables=[], dual_variables=[]
+    )
+
+    # Solve all problems and record solutions
+    return solve_batch(problem_iterator, recorder),
+        length(recorder.primal_variables),
+        length(original_load),
+        batch_id
+end
+
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
     @testset "Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
@@ -163,6 +220,31 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         # Check if problem iterator was saved
         @test isfile(file_in)
         @test length(readdlm(file_in, ',')[:, 1]) == num_p + 1
+        @test length(readdlm(file_in, ',')[1, :]) == 1 + number_parameters
+
+        # Check if the number of successfull solves is equal to the number of problems saved
+        @test isfile(file_out)
+        @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+
+        return file_in, file_out
+    end
+end
+
+function test_generate_worst_case_dataset(path::AbstractString, case_name::AbstractString, num_p::Int)
+    @testset "Worst Case Dataset Generation pglib case" begin
+        network_formulation = DCPPowerModel
+        # Improve dataset
+        success_solves, number_variables, number_parameters, batch_id = generate_worst_case_dataset(
+            path, case_name; num_p=num_p, network_formulation=network_formulation
+        )
+
+        file_in = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv")
+        file_out = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv")
+
+        # Check if problem iterator was saved
+        @test isfile(file_in)
+        @test length(readdlm(file_in, ',')[:, 1]) ==  num_p + 1
         @test length(readdlm(file_in, ',')[1, :]) == 1 + number_parameters
 
         # Check if the number of successfull solves is equal to the number of problems saved
