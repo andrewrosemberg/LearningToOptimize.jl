@@ -1,24 +1,44 @@
-abstract type RecorderFile end
+abstract type FileType end
+
+mutable struct RecorderFile{T<:FileType}
+    filename::String
+end
+
+filename(recorder_file::RecorderFile) = recorder_file.filename
 
 """
     Recorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
 
 Recorder of optimization problem solutions.
 """
-mutable struct Recorder{T<:RecorderFile}
-    filename::String
-    primal_variables::AbstractArray{VariableRef}
-    dual_variables::AbstractArray{ConstraintRef}
+mutable struct Recorder{T<:FileType}
+    recorder_file::RecorderFile{T}
+    recorder_file_input::RecorderFile{T}
+    primal_variables::Vector{VariableRef}
+    dual_variables::Vector{ConstraintRef}
     filterfn::Function
 
     function Recorder{T}(
         filename::String;
+        filename_input::String=filename * "_input_",
         primal_variables=[],
         dual_variables=[],
         filterfn=(model) -> termination_status(model) == MOI.OPTIMAL,
-    ) where {T<:RecorderFile}
-        return new{T}(filename, primal_variables, dual_variables, filterfn)
+    ) where {T<:FileType}
+        return new{T}(RecorderFile{T}(filename), RecorderFile{T}(filename_input), primal_variables, dual_variables, filterfn)
     end
+end
+
+filename(recorder::Recorder) = filename(recorder.recorder_file)
+
+filename_input(recorder::Recorder) = filename(recorder.recorder_file_input)
+
+function set_primal_variable!(recorder::Recorder, p::Vector{VariableRef})
+    recorder.primal_variables = p
+end
+
+function set_dual_variable!(recorder::Recorder, p::Vector{ConstraintRef})
+    recorder.dual_variables = p
 end
 
 abstract type AbstractProblemIterator end
@@ -55,7 +75,7 @@ Save optimization problem instances to a file.
 """
 function save(
     problem_iterator::ProblemIterator, filename::String, file_type::Type{T}
-) where {T<:RecorderFile}
+) where {T<:FileType}
     return save(
         (;
             id=problem_iterator.ids,
@@ -107,12 +127,12 @@ function solve_and_record(
 end
 
 """
-    solve_batch(problem_iterator::ProblemIterator, recorder::Recorder)
+    solve_batch(problem_iterator::AbstractProblemIterator, recorder)
 
 Solve a batch of optimization problems and record the solutions.
 """
 function solve_batch(
-    problem_iterator::ProblemIterator, recorder::Recorder
+    problem_iterator::AbstractProblemIterator, recorder
 )
     successfull_solves =
         sum(

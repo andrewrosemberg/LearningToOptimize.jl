@@ -38,7 +38,7 @@ function load_sampler(
 end
 
 """
-    generate_dataset_pglib(data_dir::AbstractString, case_name::AbstractString; download_files::Bool=true, filetype::Type{RecorderFile},
+    generate_dataset_pglib(data_dir::AbstractString, case_name::AbstractString; download_files::Bool=true, filetype::Type{FileType},
     num_p::Int=10
 )
 

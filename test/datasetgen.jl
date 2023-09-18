@@ -1,10 +1,10 @@
 
 """
-    testdataset_gen(path::AbstractString)
+    test_problem_iterator(path::AbstractString)
 
 Test dataset generation for different filetypes
 """
-function testdataset_gen(path::AbstractString)
+function test_problem_iterator(path::AbstractString)
     @testset "Dataset Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
         # The problem to iterate over
         model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))

@@ -1,3 +1,25 @@
+"""
+    WorstCaseProblemIterator
+
+An iterator that iterates over a set of problems and solves the worst case
+problem for each problem in the set. The worst case problem is defined as
+the problem that maximizes the objective function over the set of problems.
+
+The iterator is initialized with a set of problem ids, a function that
+returns the parameters for a given problem, a function that builds the
+primal problem, a function that builds the dual problem, and a function
+that sets the iterator for the dual problem.
+
+The iterator returns the number of problems that were solved.
+
+# Arguments
+- `ids::Vector{UUID}`: A vector of problem ids.
+- `parameters::Function`: A function `(model) -> Vector{JuMP.Variable}` that
+    returns the parameters for a given problem.
+- `primal_builder!::Function`: A function `(model, parameters) -> modified model` that builds the primal problem for a given set of parameters.
+- `set_iterator!::Function`: A function `(model, parameters, idx) -> modified model` that modifies the dual problem for a given set of parameters and problem index.
+- `optimizer`: The optimizer to use for the primal and dual problem. # TODO: Duplicate argument
+"""
 struct WorstCaseProblemIterator <: AbstractProblemIterator
     ids::Vector{UUID}
     parameters::Function
@@ -15,6 +37,17 @@ struct WorstCaseProblemIterator <: AbstractProblemIterator
     end
 end
 
+"""
+    solve_and_record
+
+Solves the worst case problem for a given problem iterator and records the
+solution if it passes the filter function.
+
+# Arguments
+- `problem_iterator::WorstCaseProblemIterator`: The problem iterator.
+- `recorder::Recorder`: The recorder.
+- `idx::Integer`: The index of the problem to solve.
+"""
 function solve_and_record(
     problem_iterator::WorstCaseProblemIterator, recorder::Recorder, idx::Integer
 )
@@ -61,9 +94,14 @@ function solve_and_record(
     optimal_loads = value.(load_var_dual)
     optimal_dual_cost = JuMP.objective_value(jump_dual_model)
 
+    # Save input
+    recorder.primal_variables = load_var_dual
+    recorder.dual_variables = []
+    record(recorder, problem_iterator.ids[idx]; input=true)
+
     # Create final primal model and solve
     model = JuMP.Model(problem_iterator.optimizer)
-    problem_iterator.primal_builder!(jump_dual_model, optimal_loads)
+    problem_iterator.primal_builder!(jump_dual_model, optimal_loads; recorder=recorder)
     JuMP.optimize!(model)
 
     # Check if method was effective

@@ -1,4 +1,4 @@
-abstract type CSVFile <: RecorderFile end
+abstract type CSVFile <: FileType end
 
 Base.string(::Type{CSVFile}) = "csv"
 
@@ -7,9 +7,10 @@ Base.string(::Type{CSVFile}) = "csv"
 
 Record optimization problem solution to a CSV file.
 """
-function record(recorder::Recorder{CSVFile}, id::UUID)
-    if !isfile(recorder.filename)
-        open(recorder.filename, "w") do f
+function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
+    _filename = input ? filename_input(recorder) : filename(recorder)
+    if !isfile(_filename)
+        open(_filename, "w") do f
             write(f, "id")
             for p in recorder.primal_variables
                 write(f, ",$(name(p))")
@@ -21,7 +22,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID)
             write(f, "\n")
         end
     end
-    open(recorder.filename, "a") do f
+    open(_filename, "a") do f
         write(f, "$id")
         for p in recorder.primal_variables
             val = value.(p)
