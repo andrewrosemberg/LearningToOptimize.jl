@@ -1,4 +1,4 @@
-using Downloads
+using PGLib
 using PowerModels
 using JuMP, HiGHS
 import ParametricOptInterface as POI
@@ -56,15 +56,6 @@ function generate_dataset_pglib(
 )
     # Download file
     matpower_case_name = case_name * ".m"
-    case_file_path = joinpath(data_dir, matpower_case_name)
-    mkpath(data_dir)
-    if download_files && !isfile(case_file_path)
-        Downloads.download(
-            "https://raw.githubusercontent.com/power-grid-lib/pglib-opf/01681386d084d8bd03b429abcd1ee6966f68b9a3/" *
-            matpower_case_name,
-            case_file_path,
-        )
-    end
 
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -73,7 +64,7 @@ function generate_dataset_pglib(
     end
 
     # Read data
-    network_data = PowerModels.parse_file(case_file_path)
+    network_data = make_basic_network(pglib(matpower_case_name))
 
     # The problem to iterate over
     model = Model(solver)
