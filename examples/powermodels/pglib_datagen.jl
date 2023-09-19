@@ -85,8 +85,8 @@ end
 
 function load_set_iterator!(model, parameters, idx, original_load)
     for (i, p) in enumerate(parameters)
-        @constraint(model, p <= original_load[i] * (1.0 + 0.01 * idx))
-        @constraint(model, p >= 0.0)
+        @constraint(model, p <= original_load[i] * (1.0 + 0.1 * idx))
+        @constraint(model, p >= original_load[i] * (1.0 - 0.1 * idx))
     end
 end
 
@@ -165,6 +165,7 @@ function generate_worst_case_dataset(data_dir,
     num_p=10,
     network_formulation=DCPPowerModel,
     optimizer_factory = default_optimizer_factory,
+    hook = nothing
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -201,6 +202,7 @@ function generate_worst_case_dataset(data_dir,
         primal_builder!,
         set_iterator!,
         optimizer_factory,
+        hook
     )
 
     # File names
@@ -253,7 +255,7 @@ function test_generate_worst_case_dataset(path::AbstractString, case_name::Abstr
 
         # Check if problem iterator was saved
         @test isfile(file_in)
-        @test length(readdlm(file_in, ',')[:, 1]) ==  num_p + 1
+        @test length(readdlm(file_in, ',')[:, 1]) ==  num_p * success_solves + 1
         @test length(readdlm(file_in, ',')[1, :]) == 1 + number_parameters
 
         # Check if the number of successfull solves is equal to the number of problems saved

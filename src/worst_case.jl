@@ -26,14 +26,16 @@ struct WorstCaseProblemIterator <: AbstractProblemIterator
     primal_builder!::Function
     set_iterator!::Function
     optimizer
+    hook
     function WorstCaseProblemIterator(
         ids::Vector{UUID},
         parameters::Function,
         primal_builder!::Function,
         set_iterator!::Function,
         optimizer,
+        hook=nothing,
     )
-        return new(ids, parameters, primal_builder!, set_iterator!, optimizer)
+        return new(ids, parameters, primal_builder!, set_iterator!, optimizer, hook)
     end
 end
 
@@ -71,6 +73,9 @@ function solve_and_record(
     jump_dual_model = JuMP.Model()
     map_moi_to_jump = MOI.copy_to(JuMP.backend(jump_dual_model), dual_model)
     set_optimizer(jump_dual_model, problem_iterator.optimizer())
+    if !isnothing(problem_iterator.hook)
+        problem_iterator.hook(jump_dual_model)
+    end
 
     # Get dual variables for the parameters
     load_dual_idxs = [map_moi_to_jump[primal_dual_map.primal_parameter[l]].value for l in load_moi_idx]
@@ -91,8 +96,6 @@ function solve_and_record(
 
     # Solve the dual
     JuMP.optimize!(jump_dual_model)
-    optimal_loads = value.(load_var_dual)
-    optimal_dual_cost = JuMP.objective_value(jump_dual_model)
 
     # Save input
     if recorder.filterfn(jump_dual_model)
@@ -102,6 +105,10 @@ function solve_and_record(
     else
         return 0
     end
+
+    optimal_loads = value.(load_var_dual)
+    optimal_dual_cost = JuMP.objective_value(jump_dual_model)
+
     # Create final primal model and solve
     model = JuMP.Model(problem_iterator.optimizer())
     problem_iterator.primal_builder!(model, optimal_loads; recorder=recorder)
