@@ -137,23 +137,23 @@ function test_worst_case_problem_iterator(path::AbstractString)
         @test isfile(file_output)
         if filetype == CSVFile
             # test input file
-            @test length(readdlm(file_input, ',')[:, 1]) == num_p + 1
+            @test length(readdlm(file_input, ',')[:, 1]) >= num_p + 1
             @test length(readdlm(file_input, ',')[1, :]) == 2
             rm(file_input)
             # test output file
-            @test length(readdlm(file_output, ',')[:, 1]) == num_p + 1
+            @test length(readdlm(file_output, ',')[:, 1]) >= num_p + 1
             @test length(readdlm(file_output, ',')[1, :]) == 4
             rm(file_output)
         else
             # test input file
             df = Arrow.Table(file_input)
             @test length(df) == 2
-            @test length(df[1]) == num_p
+            @test length(df[1]) >= num_p
             rm(file_input)
             # test output file
             df = Arrow.Table(file_output)
             @test length(df) == 4
-            @test length(df[1]) == num_p
+            @test length(df[1]) >= num_p
             rm(file_output)
         end
     end

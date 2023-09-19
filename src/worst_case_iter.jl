@@ -19,9 +19,9 @@ function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
     return objective
 end
 
-function save_input(parameter_values, _recorder, id)
+function save_input(parameters, _recorder, id)
     recorder = deepcopy(_recorder)
-    recorder.primal_variables = parameter_values
+    recorder.primal_variables = parameters
     recorder.dual_variables = []
     record(recorder, id; input=true)
     return nothing
@@ -47,7 +47,7 @@ function (callback::StorageCallbackObjective)(parameter_values)
 
     Zygote.@ignore obj > 0 && Zygote.@ignore callback.success_solves += 1
     Zygote.@ignore begin
-        id = uuid1(); record(callback.recorder, id); save_input(parameter_values, recorder, id)
+        id = uuid1(); record(callback.recorder, id); save_input(callback.parameters, callback.recorder, id)
     end
     Zygote.@ignore @info "Iter: $(callback.fcalls):" obj
     return - obj
@@ -75,9 +75,9 @@ function solve_and_record(
 
     # Optimize model_non:
     if !isnothing(problem_iterator.options)
-        optimize(model_non, problem_iterator.algorithm, starting_point; options = problem_iterator.options)
+        optimize(model_non, problem_iterator.optimizer, starting_point; options = problem_iterator.options)
     else
-        optimize(model_non, problem_iterator.algorithm, starting_point)
+        optimize(model_non, problem_iterator.optimizer, starting_point)
     end
 
     # best_solution = r_bayes.minimizer
