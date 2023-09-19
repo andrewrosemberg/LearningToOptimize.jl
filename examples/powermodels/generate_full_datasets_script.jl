@@ -33,7 +33,7 @@ filetype = ArrowFile
 
 # Case name
 case_name = "pglib_opf_case5_pjm" # "pglib_opf_case300_ieee"
-network_formulation = SOCWRConicPowerModel
+network_formulation = DCPPowerModel # SOCWRConicPowerModel
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
 
