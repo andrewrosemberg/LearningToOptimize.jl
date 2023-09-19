@@ -20,22 +20,24 @@ The iterator returns the number of problems that were solved.
 - `set_iterator!::Function`: A function `(model, parameters, idx) -> modified model` that modifies the dual problem for a given set of parameters and problem index.
 - `optimizer`: The optimizer to use for the primal and dual problem. # TODO: Duplicate argument
 """
-struct WorstCaseProblemIterator <: AbstractProblemIterator
+struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
     ids::Vector{UUID}
     parameters::Function
     primal_builder!::Function
     set_iterator!::Function
-    optimizer
-    hook
+    optimizer::F
+    hook::Union{Nothing, Function}
+    options::Any
     function WorstCaseProblemIterator(
         ids::Vector{UUID},
         parameters::Function,
         primal_builder!::Function,
         set_iterator!::Function,
-        optimizer,
-        hook=nothing,
-    )
-        return new(ids, parameters, primal_builder!, set_iterator!, optimizer, hook)
+        optimizer::F;
+        hook::Union{Nothing, Function}=nothing,
+        options::Any=nothing
+    ) where {F}
+        new{F}(ids, parameters, primal_builder!, set_iterator!, optimizer, hook, options)
     end
 end
 
@@ -59,7 +61,7 @@ function solve_and_record(
     problem_iterator.primal_builder!(model, parameters)
     
     # Parameter indices
-    load_moi_idx =  Vector{MOI.VariableIndex}(JuMP.index.(parameters))
+    load_moi_idx = Vector{MOI.VariableIndex}(JuMP.index.(parameters))
 
     # Dualize the model
     dual_st = Dualization.dualize(JuMP.backend(model), 

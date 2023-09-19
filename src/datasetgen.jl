@@ -80,7 +80,7 @@ end
 Save optimization problem instances to a file.
 """
 function save(
-    problem_iterator::ProblemIterator, filename::String, file_type::Type{T}
+    problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:FileType}
     return save(
         (;

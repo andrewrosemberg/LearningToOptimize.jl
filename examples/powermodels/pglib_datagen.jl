@@ -115,7 +115,7 @@ function generate_dataset_pglib(
     network_data = make_basic_network(pglib(matpower_case_name))
 
     # The problem to iterate over
-    model = Model(optimizer)
+    model = JuMP.Model(optimizer)
     MOI.set(model, MOI.Silent(), true)
 
     # Save original load value and Link POI
@@ -201,8 +201,8 @@ function generate_worst_case_dataset(data_dir,
         parameter_factory,
         primal_builder!,
         set_iterator!,
-        optimizer_factory,
-        hook
+        optimizer_factory;
+        hook=hook
     )
 
     # File names
