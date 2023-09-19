@@ -70,7 +70,7 @@ function solve_and_record(
     # Build Dual in JuMP
     jump_dual_model = JuMP.Model()
     map_moi_to_jump = MOI.copy_to(JuMP.backend(jump_dual_model), dual_model)
-    set_optimizer(jump_dual_model, problem_iterator.optimizer)
+    set_optimizer(jump_dual_model, problem_iterator.optimizer())
 
     # Get dual variables for the parameters
     load_dual_idxs = [map_moi_to_jump[primal_dual_map.primal_parameter[l]].value for l in load_moi_idx]
@@ -95,12 +95,15 @@ function solve_and_record(
     optimal_dual_cost = JuMP.objective_value(jump_dual_model)
 
     # Save input
-    recorder.primal_variables = load_var_dual
-    recorder.dual_variables = []
-    record(recorder, problem_iterator.ids[idx]; input=true)
-
+    if recorder.filterfn(jump_dual_model)
+        recorder.primal_variables = load_var_dual
+        recorder.dual_variables = []
+        record(recorder, problem_iterator.ids[idx]; input=true)
+    else
+        return 0
+    end
     # Create final primal model and solve
-    model = JuMP.Model(problem_iterator.optimizer)
+    model = JuMP.Model(problem_iterator.optimizer())
     problem_iterator.primal_builder!(model, optimal_loads; recorder=recorder)
     JuMP.optimize!(model)
 

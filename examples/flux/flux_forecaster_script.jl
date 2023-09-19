@@ -8,9 +8,9 @@ using PowerModels
 
 # Paths
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
-case_name = "pglib_opf_case5_pjm"
+case_name = "pglib_opf_case300_ieee"
 filetype = ArrowFile
-network_formulation = DCPPowerModel
+network_formulation = SOCWRConicPowerModel
 case_file_path = joinpath(path, case_name, string(network_formulation))
 
 # Load input and output data tables

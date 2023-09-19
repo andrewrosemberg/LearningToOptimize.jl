@@ -1,3 +1,4 @@
+# run with: julia ./examples/powermodels/generate_full_datasets_script.jl 
 using TestEnv
 TestEnv.activate()
 
@@ -9,6 +10,7 @@ using PowerModels
 using Clarabel
 import JuMP.MOI as MOI
 import ParametricOptInterface as POI
+using Ipopt
 
 cached = MOI.Bridges.full_bridge_optimizer(
     MOI.Utilities.CachingOptimizer(
@@ -32,15 +34,36 @@ filetype = ArrowFile
 case_name = "pglib_opf_case300_ieee"
 network_formulation = SOCWRConicPowerModel
 case_file_path = joinpath(path, case_name)
-solver = () -> POI.Optimizer(cached())
+solver = () -> POI.Optimizer(cached)
 
 # Generate dataset
-success_solves = 0.0
+# global success_solves = 0.0
+# for i in 1:num_batches
+#     _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
+#         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=solver,
+#         load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
+#     )
+#     global success_solves += _success_solves
+# end
+# success_solves /= num_batches
+
+# @info "Success solves Normal: $(success_solves)"
+
+# Generate worst case dataset
+
+function optimizer_factory()
+    IPO_OPT = Ipopt.Optimizer()
+    IPO = MOI.Bridges.Constraint.SOCtoNonConvexQuad{Float64}(IPO_OPT)
+    return () -> IPO
+end
+
+global success_solves = 0.0
 for i in 1:num_batches
-    _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
-        num_p=num_p, filetype=filetype, network_formulation=network_formulation, solver=solver,
-        load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
+    _success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset(case_file_path, case_name; 
+        num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer_factory=optimizer_factory,
     )
-    success_solves += _success_solves
+    global success_solves += _success_solves
 end
 success_solves /= num_batches
+
+@info "Success solves Worst Case: $(success_solves) of $(num_batches * num_p)"

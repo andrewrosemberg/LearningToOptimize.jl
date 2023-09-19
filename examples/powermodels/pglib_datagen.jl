@@ -19,6 +19,13 @@ function return_variablerefs(pm::AbstractPowerModel)
     )
 end
 
+function add_names_pm(pm::AbstractPowerModel)
+    variable_refs = return_variablerefs(pm)
+    for variableref in variable_refs
+        set_name(variableref, replace(name(variableref), "," => "_"))
+    end
+end
+
 """
     load_sampler(original_load::T, num_p::Int, max_multiplier::T=3.0, min_multiplier::T=0.0, step_multiplier::T=0.1)
 
@@ -97,20 +104,18 @@ function generate_dataset_pglib(
     num_p=10,
     load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
-    solver = () -> POI.Optimizer(HiGHS.Optimizer()),
+    optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
-    if !isdir(data_sim_dir)
-        mkdir(data_sim_dir)
-    end
+    mkpath(data_sim_dir)
 
     # Read data
     matpower_case_name = case_name * ".m"
     network_data = make_basic_network(pglib(matpower_case_name))
 
     # The problem to iterate over
-    model = Model(solver)
+    model = Model(optimizer)
     MOI.set(model, MOI.Silent(), true)
 
     # Save original load value and Link POI
@@ -150,12 +155,16 @@ function generate_dataset_pglib(
         batch_id
 end
 
+function default_optimizer_factory()
+    return () -> Ipopt.Optimizer()
+end
+
 function generate_worst_case_dataset(data_dir,
     case_name;
     filetype=CSVFile,
     num_p=10,
     network_formulation=DCPPowerModel,
-    optimizer = () -> Ipopt.Optimizer(),
+    optimizer_factory = default_optimizer_factory,
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -191,7 +200,7 @@ function generate_worst_case_dataset(data_dir,
         parameter_factory,
         primal_builder!,
         set_iterator!,
-        optimizer,
+        optimizer_factory,
     )
 
     # File names

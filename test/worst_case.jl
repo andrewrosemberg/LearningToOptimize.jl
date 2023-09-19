@@ -7,7 +7,9 @@ Test dataset generation using the worst case problem iterator for different file
 function test_worst_case_problem_iterator(path::AbstractString)
     @testset "Worst Case Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
         # The problem to iterate over
-        optimizer = () -> Ipopt.Optimizer()
+        function optimizer_factory()
+            return () -> Ipopt.Optimizer()
+        end
         parameter_factory = (model) -> [@variable(model, _p)]
         function primal_builder!(model, parameters; recorder=nothing)
             @variable(model, x)
@@ -29,7 +31,7 @@ function test_worst_case_problem_iterator(path::AbstractString)
             parameter_factory,
             primal_builder!,
             set_iterator!,
-            optimizer,
+            optimizer_factory,
         )
 
         # file_names
