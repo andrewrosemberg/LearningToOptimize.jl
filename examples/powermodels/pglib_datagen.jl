@@ -167,6 +167,8 @@ function generate_worst_case_dataset_bayes(data_dir,
     num_p=10,
     network_formulation=DCPPowerModel,
     optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
+    algorithm = _BayesOptAlg(),
+    options = _bayes_options(num_p),
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -214,10 +216,12 @@ function generate_worst_case_dataset_bayes(data_dir,
 
     # Set iterator
     function _set_iterator!(idx)
-        min_demands = zeros(num_loads * 2)
-        max_demands = original_load .+ ones(num_loads * 2) .* 0.1 * idx
-        max_total_volume = norm(max_demands, 2) ^ 2
-        starting_point = original_load ./ 10
+        _min_demands = original_load .- ones(num_loads * 2) .* 0.1 * idx
+        _max_demands = original_load .+ ones(num_loads * 2) .* 0.1 * idx
+        min_demands = min.(_min_demands, _max_demands)
+        max_demands = max.(_min_demands, _max_demands)
+        max_total_volume = (norm(max_demands, 2) + norm(min_demands, 2)) ^ 2
+        starting_point = original_load
         return min_demands, max_demands, max_total_volume, starting_point
     end
 
@@ -227,8 +231,8 @@ function generate_worst_case_dataset_bayes(data_dir,
         () -> nothing, # will be ignored
         _primal_builder!,
         _set_iterator!,
-        _BayesOptAlg();
-        options = _bayes_options(num_p)
+        algorithm;
+        options = options
     )
 
     # Solve all problems and record solutions

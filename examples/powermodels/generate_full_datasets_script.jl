@@ -17,6 +17,8 @@ using NonconvexBayesian # Nonconvex.@load BayesOpt
 using AbstractGPs
 using KernelFunctions
 
+using NonconvexNLopt
+
 # using QuadraticToBinary
 
 ########## SOLVERS ##########
@@ -44,6 +46,9 @@ function _bayes_options(maxiter)
         fit_prior=false # not working with custom priors
     )
 end
+
+algorithm = NLoptAlg(:LN_BOBYQA)
+options = NLoptOptions(maxeval=30)
 
 ########## DATASET GENERATION ##########
 
@@ -101,6 +106,7 @@ global success_solves = 0.0
 for i in 1:num_batches
     _success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_bayes(case_file_path, case_name; 
         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
+        algorithm=algorithm, options=options,
     )
     global success_solves += _success_solves
 end
