@@ -37,7 +37,7 @@ function _bayes_options(maxiter)
     BayesOptOptions(
         sub_options = IpoptOptions(max_iter = 20, print_level = 0),
         # ninit=Int(floor(maxiter / 5)),
-        maxiter = maxiter, ftol = 1e-4, ctol = 1e-5, initialize=true, postoptimize=false,
+        maxiter = maxiter * 100, ftol = 1e-4, ctol = 1e-5, initialize=true, postoptimize=false,
         kernel= RationalKernel(α=2.27e8) ∘ ScaleTransform(0.01),
         noise=0.001,
         std_multiple=8.67e4,
@@ -54,11 +54,11 @@ include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
 num_batches = 1
-num_p = 10
+num_p = 5
 filetype = ArrowFile
 
 # Case name
-case_name = "pglib_opf_case5_pjm" # "pglib_opf_case300_ieee"
+case_name = "pglib_opf_case300_ieee" # "pglib_opf_case300_ieee"
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)

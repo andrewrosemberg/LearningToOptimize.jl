@@ -28,6 +28,7 @@ struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
     optimizer::F
     hook::Union{Nothing, Function}
     options::Any
+    ext::Dict
     function WorstCaseProblemIterator(
         ids::Vector{UUID},
         parameters::Function,
@@ -35,9 +36,10 @@ struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
         set_iterator!::Function,
         optimizer::F;
         hook::Union{Nothing, Function}=nothing,
-        options::Any=nothing
+        options::Any=nothing,
+        ext::Dict=Dict()
     ) where {F}
-        new{F}(ids, parameters, primal_builder!, set_iterator!, optimizer, hook, options)
+        new{F}(ids, parameters, primal_builder!, set_iterator!, optimizer, hook, options, ext)
     end
 end
 

@@ -72,6 +72,10 @@ function solve_and_record(
         recorder
     )
 
+    if haskey(problem_iterator.ext, :best_solution)
+        starting_point = problem_iterator.ext[:best_solution]
+    end
+
     # Build Nonconvex optimization model:
     model_non = Nonconvex.Model()
     set_objective!(model_non, storage_objective_function, flags = [:expensive])
@@ -81,13 +85,13 @@ function solve_and_record(
     # Solution Method: Bayesian Optimization
 
     # Optimize model_non:
-    if !isnothing(problem_iterator.options)
+    r_bayes = if !isnothing(problem_iterator.options)
         optimize(model_non, problem_iterator.optimizer, starting_point; options = problem_iterator.options)
     else
         optimize(model_non, problem_iterator.optimizer, starting_point)
     end
 
-    # best_solution = r_bayes.minimizer
+    problem_iterator.ext[:best_solution] = r_bayes.minimizer
     # best_profit = -r_bayes.minimum
 
     return storage_objective_function.success_solves / storage_objective_function.fcalls

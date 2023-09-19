@@ -215,9 +215,9 @@ function generate_worst_case_dataset_bayes(data_dir,
     # Set iterator
     function _set_iterator!(idx)
         min_demands = zeros(num_loads * 2)
-        max_demands = ones(num_loads * 2) .+ 0.1 * idx
-        max_total_volume = norm(original_load, 2) ^ 2
-        starting_point = original_load
+        max_demands = original_load .+ ones(num_loads * 2) .* 0.1 * idx
+        max_total_volume = norm(max_demands, 2) ^ 2
+        starting_point = original_load ./ 10
         return min_demands, max_demands, max_total_volume, starting_point
     end
 
