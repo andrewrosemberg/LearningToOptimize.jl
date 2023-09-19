@@ -45,9 +45,11 @@ function (callback::StorageCallbackObjective)(parameter_values)
 
     obj = primal_objective(parameter_values, callback.parameters, callback.filter_fn)
 
-    Zygote.@ignore obj > 0 && Zygote.@ignore callback.success_solves += 1
     Zygote.@ignore begin
-        id = uuid1(); record(callback.recorder, id); save_input(callback.parameters, callback.recorder, id)
+        if obj > 0
+            callback.success_solves += 1
+            id = uuid1(); record(callback.recorder, id); save_input(callback.parameters, callback.recorder, id)
+        end
     end
     Zygote.@ignore @info "Iter: $(callback.fcalls):" obj
     return - obj
