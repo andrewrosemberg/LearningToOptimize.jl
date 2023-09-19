@@ -6,6 +6,7 @@ using Dualization
 using JuMP
 using UUIDs
 import ParametricOptInterface as POI
+import JuMP.MOI as MOI
 import Base: string
 
 using Nonconvex

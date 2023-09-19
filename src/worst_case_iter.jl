@@ -6,9 +6,14 @@ function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
     end
 
     # Solve the model
-    JuMP.optimize!(model)
+    status = false
+    try 
+        JuMP.optimize!(model)
 
-    status = filter_fn(model)
+        status = filter_fn(model)
+    catch e
+        @warn "Error in solve_and_record: $e"
+    end
 
     objective = if status
         JuMP.objective_value(model)
@@ -20,9 +25,9 @@ function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
 end
 
 function save_input(parameters, _recorder, id)
-    recorder = deepcopy(_recorder)
-    recorder.primal_variables = parameters
-    recorder.dual_variables = []
+    recorder = similar(_recorder)
+    set_primal_variable!(recorder, parameters)
+    set_dual_variable!(recorder, [])
     record(recorder, id; input=true)
     return nothing
 end

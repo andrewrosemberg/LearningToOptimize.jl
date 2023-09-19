@@ -36,8 +36,20 @@ mutable struct Recorder{T<:FileType}
 end
 
 filename(recorder::Recorder) = filename(recorder.recorder_file)
-
 filename_input(recorder::Recorder) = filename(recorder.recorder_file_input)
+get_primal_variables(recorder::Recorder) = recorder.primal_variables
+get_dual_variables(recorder::Recorder) = recorder.dual_variables
+get_filterfn(recorder::Recorder) = recorder.filterfn
+
+function similar(recorder::Recorder{T}) where {T<:FileType}
+    return Recorder{T}(
+        filename(recorder); 
+        filename_input=filename_input(recorder),
+        primal_variables=get_primal_variables(recorder),
+        dual_variables=get_dual_variables(recorder),
+        filterfn=get_filterfn(recorder),
+    )
+end
 
 function set_primal_variable!(recorder::Recorder, p::Vector)
     recorder.primal_variables = p

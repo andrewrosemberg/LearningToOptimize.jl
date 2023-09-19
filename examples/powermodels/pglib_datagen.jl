@@ -79,9 +79,10 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
         end
         set_primal_variable!(recorder, variable_refs)
         # set_dual_variable!(recorder, [cons for cons in values(pm["constraint"])])
+        return model, parameters, variable_refs
     end
 
-    return model, parameters
+    return nothing
 end
 
 function load_set_iterator!(model, parameters, idx, original_load)
@@ -178,7 +179,7 @@ function generate_worst_case_dataset_bayes(data_dir,
     network_data = make_basic_network(pglib(matpower_case_name))
 
     # The problem to iterate over
-    model = JuMP.Model(optimizer)
+    model = JuMP.Model(() -> optimizer())
     MOI.set(model, MOI.Silent(), true)
 
     # Save original load value and Link POI
@@ -193,9 +194,22 @@ function generate_worst_case_dataset_bayes(data_dir,
     batch_id = string(uuid1())
     @info "Batch ID: $batch_id"
 
+    # File names
+    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
+    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    recorder = Recorder{filetype}(
+        file_output; filename_input=file_input,
+        primal_variables=[], dual_variables=[]
+    )
+
     # Build model
+    model, parameters, variable_refs = pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
     function _primal_builder!(;recorder=nothing)
-        pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
+        if !isnothing(recorder)
+            set_primal_variable!(recorder, variable_refs)
+        end
+
+       return model, parameters
     end
 
     # Set iterator
@@ -215,14 +229,6 @@ function generate_worst_case_dataset_bayes(data_dir,
         _set_iterator!,
         _BayesOptAlg();
         options = _bayes_options(num_p)
-    )
-
-    # File names
-    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
-    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
-    recorder = Recorder{filetype}(
-        file_output; filename_input=file_input,
-        primal_variables=[], dual_variables=[]
     )
 
     # Solve all problems and record solutions
