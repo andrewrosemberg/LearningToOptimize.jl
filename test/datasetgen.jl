@@ -7,7 +7,7 @@ Test dataset generation for different filetypes
 function test_problem_iterator(path::AbstractString)
     @testset "Dataset Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
         # The problem to iterate over
-        model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))
+        model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
         @variable(model, x)
         p = @variable(model, _p in POI.Parameter(1.0))
         @constraint(model, cons, x + _p >= 3)

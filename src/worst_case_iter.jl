@@ -69,7 +69,7 @@ function solve_and_record(
     model_non = Nonconvex.Model()
     set_objective!(model_non, storage_objective_function, flags = [:expensive])
     addvar!(model_non, min_demands, max_demands)
-    add_ineq_constraint!(model_non, x -> sum(x) - max_total_volume)
+    add_ineq_constraint!(model_non, x -> sum(x .^ 2) - max_total_volume ^ 2)
 
     # Solution Method: Bayesian Optimization
 
