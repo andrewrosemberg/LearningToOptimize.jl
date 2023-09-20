@@ -5,13 +5,14 @@ using Arrow
 using Flux
 using DataFrames
 using PowerModels
+using L2O
 
 # Paths
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_name = "pglib_opf_case300_ieee"
 filetype = ArrowFile
 network_formulation = SOCWRConicPowerModel
-case_file_path = joinpath(path, case_name, string(network_formulation))
+case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
 
 # Load input and output data tables
 iter_files = readdir(joinpath(case_file_path))

@@ -59,7 +59,7 @@ include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
 num_batches = 1
-num_p = 5
+num_p = 200
 filetype = ArrowFile
 
 # Case name
