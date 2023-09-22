@@ -92,5 +92,5 @@ function solve_and_record(
     problem_iterator.ext[:best_solution] = r_Nonconvex.minimizer
     # best_profit = -r_Nonconvex.minimum
 
-    return storage_objective_function.success_solves / storage_objective_function.fcalls
+    return storage_objective_function.success_solves / storage_objective_function.fcalls, false
 end

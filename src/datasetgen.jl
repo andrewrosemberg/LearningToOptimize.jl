@@ -70,20 +70,21 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     model::JuMP.Model
     ids::Vector{UUID}
     pairs::Dict{VariableRef,Vector{T}}
+    early_stop::Function
     function ProblemIterator(
-        ids::Vector{UUID}, pairs::Dict{VariableRef,Vector{T}}
+        ids::Vector{UUID}, pairs::Dict{VariableRef,Vector{T}}, early_stop::Function=(args...) -> false
     ) where {T<:Real}
         model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
             @assert length(ids) == length(val)
         end
-        return new{T}(model, ids, pairs)
+        return new{T}(model, ids, pairs, early_stop)
     end
 end
 
-function ProblemIterator(pairs::Dict{VariableRef,Vector{T}}) where {T<:Real}
+function ProblemIterator(pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false) where {T<:Real}
     ids = [uuid1() for _ in 1:length(first(values(pairs)))]
-    return ProblemIterator(ids, pairs)
+    return ProblemIterator(ids, pairs, early_stop)
 end
 
 """
@@ -137,11 +138,13 @@ function solve_and_record(
     model = problem_iterator.model
     update_model!(model, problem_iterator.pairs, idx)
     optimize!(model)
-    if recorder.filterfn(model)
+    status = recorder.filterfn(model)
+    early_stop_bool = problem_iterator.early_stop(model, status, recorder)
+    if status
         record(recorder, problem_iterator.ids[idx])
-        return 1
+        return 1, early_stop_bool
     end
-    return 0
+    return 0, early_stop_bool
 end
 
 """
@@ -152,11 +155,17 @@ Solve a batch of optimization problems and record the solutions.
 function solve_batch(
     problem_iterator::AbstractProblemIterator, recorder
 )
-    successfull_solves =
-        sum(
-            solve_and_record(problem_iterator, recorder, idx) for
-            idx in 1:length(problem_iterator.ids)
-        ) / length(problem_iterator.ids)
+    successfull_solves = 0.0
+    for idx in 1:length(problem_iterator.ids)
+        _success_bool, early_stop_bool = solve_and_record(problem_iterator, recorder, idx)
+        if _success_bool == 1
+            successfull_solves += 1
+        end
+        if early_stop_bool
+            break
+        end
+    end
+    successfull_solves = successfull_solves / length(problem_iterator.ids)
 
     @info "Recorded $(successfull_solves * 100) % of $(length(problem_iterator.ids)) problems"
     return successfull_solves

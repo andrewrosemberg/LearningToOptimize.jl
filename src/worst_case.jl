@@ -29,6 +29,7 @@ struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
     hook::Union{Nothing, Function}
     options::Any
     ext::Dict
+    early_stop::Function
     function WorstCaseProblemIterator(
         ids::Vector{UUID},
         parameters::Function,
@@ -37,9 +38,10 @@ struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
         optimizer::F;
         hook::Union{Nothing, Function}=nothing,
         options::Any=nothing,
-        ext::Dict=Dict()
+        ext::Dict=Dict(),
+        early_stop::Function=(args...) -> false
     ) where {F}
-        new{F}(ids, parameters, primal_builder!, set_iterator!, optimizer, hook, options, ext)
+        new{F}(ids, parameters, primal_builder!, set_iterator!, optimizer, hook, options, ext, early_stop)
     end
 end
 
@@ -102,12 +104,17 @@ function solve_and_record(
     JuMP.optimize!(jump_dual_model)
 
     # Save input
+    status = recorder.filterfn(jump_dual_model)
+    early_stop_bool = problem_iterator.early_stop(jump_dual_model, status, recorder)
+    if early_stop_bool
+        return 0, early_stop_bool
+    end
     if recorder.filterfn(jump_dual_model)
         recorder.primal_variables = load_var_dual
         recorder.dual_variables = []
         record(recorder, problem_iterator.ids[idx]; input=true)
     else
-        return 0
+        return 0, early_stop_bool
     end
 
     optimal_loads = value.(load_var_dual)
@@ -118,14 +125,16 @@ function solve_and_record(
     problem_iterator.primal_builder!(model, optimal_loads; recorder=recorder)
     JuMP.optimize!(model)
 
+    termination_status = recorder.filterfn(model)
+    early_stop_bool = problem_iterator.early_stop(model, termination_status, recorder)
+
     # Check if method was effective
     optimal_final_cost = JuMP.objective_value(model)
-    termination_status = JuMP.termination_status(model)
     solution_primal_status = JuMP.primal_status(model)
     solution_dual_status = JuMP.dual_status(model)
-    termination_status == MOI.INFEASIBLE && @error("Optimal solution not found")
-    solution_primal_status != MOI.FEASIBLE_POINT && @error("Primal solution not found")
-    solution_dual_status != MOI.FEASIBLE_POINT && @error("Dual solution not found")
+    termination_status == MOI.INFEASIBLE && @warn("Optimal solution not found")
+    solution_primal_status != MOI.FEASIBLE_POINT && @warn("Primal solution not found")
+    solution_dual_status != MOI.FEASIBLE_POINT && @warn("Dual solution not found")
     
     if !isapprox(optimal_final_cost, optimal_dual_cost; rtol=1e-4)
         rtol = abs(optimal_final_cost - optimal_dual_cost) / optimal_final_cost * 100
@@ -134,7 +143,7 @@ function solve_and_record(
 
     if recorder.filterfn(model)
         record(recorder, problem_iterator.ids[idx])
-        return 1
+        return 1, early_stop_bool
     end
-    return 0
+    return 0, early_stop_bool
 end

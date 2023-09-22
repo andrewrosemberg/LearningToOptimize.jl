@@ -107,6 +107,8 @@ function generate_dataset_pglib(
     load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
     optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
+    filterfn=L2O.filter_fn,
+    early_stop_fn = (model, status, recorder) -> false,
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -134,14 +136,15 @@ function generate_dataset_pglib(
 
     # Build model and Recorder
     file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
-    recorder = Recorder{filetype}(file)
+    recorder = Recorder{filetype}(file; filterfn=filterfn)
     pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
 
     # The problem iterator
     problem_iterator = ProblemIterator(
         Dict(
             p .=> load_sampler.(original_load, num_p),
-        ),
+        );
+        early_stop=early_stop_fn
     )
 
     save(
