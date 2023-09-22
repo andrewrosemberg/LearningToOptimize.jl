@@ -36,45 +36,63 @@ path = joinpath(path_powermodels, "data")
 include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
-num_batches = 1
-num_p = 200
-filetype = ArrowFile
+filetype = CSVFile # CSVFile # ArrowFile
 
 # Case name
-case_name = "pglib_opf_case300_ieee" # "pglib_opf_case300_ieee"
+case_name = "pglib_opf_case5_pjm" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
 
 # Generate dataset
-global success_solves = 0.0
-for i in 1:num_batches
-    _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
-        num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
-        load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
-    )
-    global success_solves += _success_solves
-end
-success_solves /= num_batches
+# num_batches = 1
+# num_p = 200
+# global success_solves = 0.0
+# for i in 1:num_batches
+#     _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
+#         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
+#         load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
+#     )
+#     global success_solves += _success_solves
+# end
+# success_solves /= num_batches
 
-@info "Success solves Normal: $(success_solves)"
+# @info "Success solves Normal: $(success_solves)"
 
 # Generate Line-search dataset
 
+matpower_case_name = case_name * ".m"
+network_data = make_basic_network(pglib(matpower_case_name))
+
 early_stop_fn = (model, status, recorder) -> !status
+step_multiplier = 1.01
+num_loads = length(network_data["load"])
+num_batches = num_loads * 2 + 1
+num_p = 10
+
+function line_sampler(_o, n, idx, num_inputs, ibatc)
+    @info "ibatc: $(ibatc)" n idx num_inputs
+    if (idx == ibatc) || (idx == num_inputs + 1)
+        return [_o * step_multiplier ^ j for j in 1:n]
+    else
+        return ones(n)
+    end
+end
 
 global success_solves = 0.0
-for i in 1:num_batches
-    _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
+global batch_id = string(uuid1())
+for ibatc in 1:num_batches
+    _success_solves, number_variables, number_loads, b_id = generate_dataset_pglib(case_file_path, case_name; 
         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
-        load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01),
-        early_stop_fn=early_stop_fn
+        load_sampler= (_o, n, idx, num_inputs) -> line_sampler(_o, n, idx, num_inputs, ibatc),
+        early_stop_fn=early_stop_fn,
+        batch_id=batch_id,
     )
     global success_solves += _success_solves
 end
 success_solves /= num_batches
 
-@info "Success solves Normal: $(success_solves)"
+@info "Success solves: $(success_solves * 100) % of $(num_batches * num_p)"
 
 # Generate worst case dataset
 
@@ -97,13 +115,13 @@ success_solves /= num_batches
 
 # @info "Success solves Worst Case: $(success_solves) of $(num_batches * num_p)"
 
-global success_solves = 0.0
-for i in 1:num_batches
-    _success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_Nonconvex(case_file_path, case_name; 
-        num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
-    )
-    global success_solves += _success_solves
-end
-success_solves /= num_batches
+# global success_solves = 0.0
+# for i in 1:num_batches
+#     _success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_Nonconvex(case_file_path, case_name; 
+#         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
+#     )
+#     global success_solves += _success_solves
+# end
+# success_solves /= num_batches
 
-@info "Success solves Worst Case: $(success_solves * 100) of $(num_batches * num_p)"
+# @info "Success solves Worst Case: $(success_solves * 100) of $(num_batches * num_p)"

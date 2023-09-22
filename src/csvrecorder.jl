@@ -52,5 +52,6 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
 end
 
 function save(table::NamedTuple, filename::String, ::Type{CSVFile})
-    return CSV.write(filename, table)
+    CSV.write(filename, table; append=isfile(filename))
+    return nothing
 end

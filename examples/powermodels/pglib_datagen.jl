@@ -34,11 +34,13 @@ Load sampling
 """
 function load_sampler(
     original_load::T,
-    num_p::Int;
+    num_p::F,
+    ::F,
+    ::F;
     max_multiplier::T=2.5,
     min_multiplier::T=0.0,
     step_multiplier::T=0.1,
-) where {T<:Real}
+) where {T<:Real, F<:Integer}
     # Load sampling
     load_samples =
         original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
@@ -109,7 +111,10 @@ function generate_dataset_pglib(
     optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
     filterfn=L2O.filter_fn,
     early_stop_fn = (model, status, recorder) -> false,
+    batch_id = string(uuid1())
 )
+    @info "Batch ID: $batch_id"
+
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
     mkpath(data_sim_dir)
@@ -124,15 +129,12 @@ function generate_dataset_pglib(
 
     # Save original load value and Link POI
     num_loads = length(network_data["load"])
+    num_inputs = num_loads * 2
     original_load = vcat(
         [l["pd"] for l in values(network_data["load"])],
         [l["qd"] for l in values(network_data["load"])],
     )
-    p = load_parameter_factory(model, 1:(num_loads * 2); load_set=POI.Parameter.(original_load))
-
-    # Define batch id
-    batch_id = string(uuid1())
-    @info "Batch ID: $batch_id"
+    p = load_parameter_factory(model, 1:(num_inputs); load_set=POI.Parameter.(original_load))
 
     # Build model and Recorder
     file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
@@ -140,10 +142,12 @@ function generate_dataset_pglib(
     pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
 
     # The problem iterator
+    pairs = Dict{VariableRef, Vector{Float64}}()
+    for i in 1:num_inputs
+        pairs[p[i]] = load_sampler(original_load[i], num_p, i, num_inputs)
+    end
     problem_iterator = ProblemIterator(
-        Dict(
-            p .=> load_sampler.(original_load, num_p),
-        );
+        pairs;
         early_stop=early_stop_fn
     )
 

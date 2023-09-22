@@ -95,7 +95,7 @@ Save optimization problem instances to a file.
 function save(
     problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:FileType}
-    return save(
+    save(
         (;
             id=problem_iterator.ids,
             zip(
@@ -105,6 +105,7 @@ function save(
         filename,
         file_type,
     )
+    return nothing
 end
 
 """
