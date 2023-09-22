@@ -83,14 +83,14 @@ function solve_and_record(
     # add_ineq_constraint!(model_non, x -> sum(x .^ 2) - max_total_volume ^ 2)
 
     # Optimize model_non:
-    r_bayes = if !isnothing(problem_iterator.options)
+    r_Nonconvex = if !isnothing(problem_iterator.options)
         optimize(model_non, problem_iterator.optimizer, starting_point; options = problem_iterator.options)
     else
         optimize(model_non, problem_iterator.optimizer, starting_point)
     end
 
-    problem_iterator.ext[:best_solution] = r_bayes.minimizer
-    # best_profit = -r_bayes.minimum
+    problem_iterator.ext[:best_solution] = r_Nonconvex.minimizer
+    # best_profit = -r_Nonconvex.minimum
 
     return storage_objective_function.success_solves / storage_objective_function.fcalls
 end

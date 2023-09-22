@@ -72,7 +72,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         end
     end
 
-    @testset "Worst Case Bayes Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
+    @testset "Worst Case NonConvex Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
         function _primal_builder!(;recorder=nothing)
             model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
             parameters = @variable(model, _p in POI.Parameter(1.0))
@@ -100,8 +100,8 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             () -> nothing, # will be ignored
             _primal_builder!,
             _set_iterator!,
-            _BayesOptAlg();
-            options = _bayes_options(floor(Int, num_p / 5))
+            NLoptAlg(:LN_BOBYQA);
+            options = NLoptOptions(maxeval=10)
         )
 
         # file_names

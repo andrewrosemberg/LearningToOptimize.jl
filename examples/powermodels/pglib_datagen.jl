@@ -161,14 +161,14 @@ function default_optimizer_factory()
     return () -> Ipopt.Optimizer()
 end
 
-function generate_worst_case_dataset_bayes(data_dir,
+function generate_worst_case_dataset_Nonconvex(data_dir,
     case_name;
     filetype=CSVFile,
     num_p=10,
     network_formulation=DCPPowerModel,
     optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
-    algorithm = _BayesOptAlg(),
-    options = _bayes_options(num_p),
+    algorithm = NLoptAlg(:LN_BOBYQA),
+    options = NLoptOptions(maxeval=10),
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -350,11 +350,11 @@ function test_generate_worst_case_dataset(path::AbstractString, case_name::Abstr
     end
 end
 
-function test_generate_worst_case_dataset_bayes(path::AbstractString, case_name::AbstractString, num_p::Int)
-    @testset "Worst Case Dataset Generation pglib case" begin
+function test_generate_worst_case_dataset_Nonconvex(path::AbstractString, case_name::AbstractString, num_p::Int)
+    @testset "WC Nonconvex Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
         # Improve dataset
-        success_solves, number_variables, number_parameters, batch_id = generate_worst_case_dataset_bayes(
+        success_solves, number_variables, number_parameters, batch_id = generate_worst_case_dataset_Nonconvex(
             path, case_name; num_p=num_p, network_formulation=network_formulation
         )
 
