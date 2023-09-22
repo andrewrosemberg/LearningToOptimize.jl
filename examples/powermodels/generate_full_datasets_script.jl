@@ -72,7 +72,8 @@ num_p = 10
 
 function line_sampler(_o, n, idx, num_inputs, ibatc)
     @info "ibatc: $(ibatc)" n idx num_inputs
-    if (idx == ibatc) || (idx == num_inputs + 1)
+    if (idx == ibatc) || (ibatc == num_inputs + 1)
+        @info "Minha vez" [_o * step_multiplier ^ j for j in 1:n]
         return [_o * step_multiplier ^ j for j in 1:n]
     else
         return ones(n)
