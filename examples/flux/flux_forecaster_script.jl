@@ -16,6 +16,7 @@ case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
 
 # Load input and output data tables
 iter_files = readdir(joinpath(case_file_path))
+iter_files = filter(x -> occursin(string(ArrowFile), x), iter_files)
 file_ins = [joinpath(case_file_path, file) for file in iter_files if occursin("input", file)]
 file_outs = [joinpath(case_file_path, file) for file in iter_files if occursin("output", file)]
 batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]

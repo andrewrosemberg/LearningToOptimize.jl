@@ -47,6 +47,37 @@ function load_sampler(
     return load_samples
 end
 
+"""
+    line_sampler(original_parameter::T, num_p::Int, parameter_index::F, num_inputs::F, line_index::F; step_multiplier::T=0.1)
+
+line_sampler is a function to help generate a dataset for varying parameter values. It has two modes:
+ - If line_index is not outside the parameter index range: 
+    Return an incremental vector for the parameter at parameter_index and an unchanged parameter for the rest;
+ - If line_index is outside the parameter index range:
+    Return an incremental vector for all parameters. 
+"""
+function line_sampler(
+    original_parameter::T, 
+    num_p::F, 
+    parameter_index::F, 
+    num_inputs::F, 
+    line_index::F; 
+    step_multiplier::T=1.01,
+)  where {T<:Real, F<:Integer}
+    # parameter sampling
+    num_parameters = floor(Int, num_inputs / 2)
+    if (parameter_index == line_index) || (parameter_index - num_parameters == line_index) || (line_index == num_inputs + 1)
+        return [original_parameter * step_multiplier ^ (j) for j in 1:num_p]
+    else
+        return ones(num_p) * original_parameter
+    end
+end
+
+"""
+    load_parameter_factory(model, indices; load_set=nothing)
+
+load_parameter_factory is a function to help generate a parameter vector for the problem iterator.
+"""
 function load_parameter_factory(model, indices; load_set=nothing)
     if isnothing(load_set)
         return @variable(
@@ -58,6 +89,11 @@ function load_parameter_factory(model, indices; load_set=nothing)
     )
 end
 
+"""
+    pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing)
+
+pm_primal_builder! is a function to help build a PowerModels model and update recorder.
+"""
 function pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing)
     num_loads = length(network_data["load"])
     for (str_i, l) in network_data["load"]
@@ -88,6 +124,11 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
     return nothing
 end
 
+"""
+    load_set_iterator!(model, parameters, idx, original_load)
+
+load_set_iterator! is a function to help iterate over the load set. Used in the worst case generator.
+"""
 function load_set_iterator!(model, parameters, idx, original_load)
     for (i, p) in enumerate(parameters)
         @constraint(model, p <= original_load[i] * (1.0 + 0.1 * idx))
@@ -163,10 +204,6 @@ function generate_dataset_pglib(
         length(recorder.primal_variables),
         length(original_load),
         batch_id
-end
-
-function default_optimizer_factory()
-    return () -> Ipopt.Optimizer()
 end
 
 function generate_worst_case_dataset_Nonconvex(data_dir,
@@ -248,6 +285,10 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
         length(recorder.primal_variables),
         length(original_load),
         batch_id
+end
+
+function default_optimizer_factory()
+    return () -> Ipopt.Optimizer()
 end
 
 function generate_worst_case_dataset(data_dir,

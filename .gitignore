@@ -8,3 +8,4 @@ Manifest.toml
 *.arrow
 *.m
 *.csv
+*.config.toml
