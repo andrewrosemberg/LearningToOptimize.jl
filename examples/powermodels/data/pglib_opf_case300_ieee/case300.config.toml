@@ -1,0 +1,19 @@
+# Name of the reference PGLib case. Must be a valid PGLib case name.
+case_name = "pglib_opf_case300_ieee"
+
+# Directory where instance/solution files are exported
+# must be a valid directory
+export_dir = "EXPORT_DIR"
+
+# [sampler]
+# num_batches = 1
+# num_samples = 10
+
+[line_search]
+num_samples = 10
+
+# [worst_case_dual]
+# num_samples = 10
+
+# [worst_case_nonconvex]
+# num_samples = 10
