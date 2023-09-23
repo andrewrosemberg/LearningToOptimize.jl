@@ -42,6 +42,9 @@ output_data_test = DataFrame(output_table_test)
 output_variables_train = output_data_train[!, Not(:id)]
 input_features_train = innerjoin(input_data_train, output_data_train[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
+num_loads = floor(Int,size(input_features_train,2)/2)
+total_volume=[sum(sqrt(input_features_train[i,l]^2 + input_features_train[i,l+num_loads]^2) for l in 1:num_loads) for i in 1:size(input_features_train,1) ] 
+
 output_variables_test = output_data_test[!, Not(:id)]
 input_features_test = innerjoin(input_data_test, output_data_test[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
