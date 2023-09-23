@@ -42,10 +42,13 @@ function test_problem_iterator(path::AbstractString)
 
         # Solve all problems and record solutions
         @testset "early_stop" begin
+            recorder_dual = Recorder{filetype}(
+                file_output; dual_variables=[cons]
+            )
             problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p));
                 early_stop=(args...) -> true
             )
-            successfull_solves = solve_batch(problem_iterator, recorder)
+            successfull_solves = solve_batch(problem_iterator, recorder_dual)
             @test num_p * successfull_solves == 1
         end
 

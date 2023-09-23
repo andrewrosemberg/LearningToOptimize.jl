@@ -8,7 +8,7 @@ using PowerModels
 using L2O
 
 # Paths
-case_name = "pglib_opf_case5_pjm" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
+case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
