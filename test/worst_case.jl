@@ -34,8 +34,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         )
 
         # file_names
-        file_input = joinpath(path, "test_input.$(string(filetype))")
-        file_output = joinpath(path, "test_output.$(string(filetype))")
+        batch_id = string(uuid1())
+        file_input = joinpath(path, "test_$(batch_id)_input.$(string(filetype))")
+        file_output = joinpath(path, "test_$(batch_id)_output.$(string(filetype))")
 
         # The recorder
         recorder = Recorder{filetype}(
@@ -105,8 +106,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         )
 
         # file_names
-        file_input = joinpath(path, "test_input.$(string(filetype))")
-        file_output = joinpath(path, "test_output.$(string(filetype))")
+        batch_id = string(uuid1())
+        file_input = joinpath(path, "test_$(batch_id)_input.$(string(filetype))")
+        file_output = joinpath(path, "test_$(batch_id)_output.$(string(filetype))")
 
         # The recorder
         recorder = Recorder{filetype}(

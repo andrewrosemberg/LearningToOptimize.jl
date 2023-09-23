@@ -42,8 +42,9 @@ function test_problem_iterator(path::AbstractString)
 
         # Solve all problems and record solutions
         @testset "early_stop" begin
+            file_dual_output = joinpath(path, "test_$(string(uuid1()))_output.$(string(filetype))") # file path
             recorder_dual = Recorder{filetype}(
-                file_output; dual_variables=[cons]
+                file_dual_output; dual_variables=[cons]
             )
             problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p));
                 early_stop=(args...) -> true
@@ -63,7 +64,7 @@ function test_problem_iterator(path::AbstractString)
                 @test length(readdlm(file_input, ',')[1, :]) == 2 # 2 parameter
                 rm(file_input)
                 # test output file
-                @test length(readdlm(file_output, ',')[:, 1]) == num_p * successfull_solves + 2 # 1 from early_stop and 1 from header
+                @test length(readdlm(file_output, ',')[:, 1]) == num_p * successfull_solves + 1 # 1 from header
                 @test length(readdlm(file_output, ',')[1, :]) == 4
                 rm(file_output)
             else
@@ -75,7 +76,7 @@ function test_problem_iterator(path::AbstractString)
                 # test output file
                 df = Arrow.Table(file_output)
                 @test length(df) == 4
-                @test length(df[1]) == num_p * successfull_solves + 1 # 1 from early_stop
+                @test length(df[1]) == num_p * successfull_solves
                 rm(file_output)
             end
         end
