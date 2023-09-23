@@ -1,8 +1,10 @@
 # run with: julia ./examples/powermodels/generate_full_datasets_script.jl "./examples/powermodels/data/pglib_opf_case300_ieee/case300.config.toml"
 config_path = ARGS[1]
 
+import Pkg; Pkg.activate(".")
+
 using TestEnv
-TestEnv.activate(dirname(config_path))
+TestEnv.activate()
 
 ########## SCRIPT REQUIRED PACKAGES ##########
 
@@ -14,6 +16,8 @@ using PowerModels
 import JuMP.MOI as MOI
 import ParametricOptInterface as POI
 using TOML
+
+PowerModels.silence()
 
 ## SOLVER PACKAGES ##
 
@@ -38,7 +42,7 @@ POI_cached_optimizer() = POI.Optimizer(cached())
 config = TOML.parsefile(config_path)
 path = config["export_dir"]
 
-path_powermodels = joinpath(@__FILE__, "data") # TODO: Make it a submodule
+path_powermodels = joinpath(dirname(@__FILE__)) # TODO: Make it a submodule
 include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 filetype = ArrowFile
@@ -46,7 +50,7 @@ filetype = ArrowFile
 case_name = config["case_name"]
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
-network_formulation=ARGS[2]
+network_formulation= eval(Symbol(ARGS[2]))
 
 ########## SAMPLER DATASET GENERATION ##########
 
