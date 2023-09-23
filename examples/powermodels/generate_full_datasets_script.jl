@@ -36,10 +36,10 @@ path = joinpath(path_powermodels, "data")
 include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
-filetype = ArrowFile # CSVFile # ArrowFile
+filetype = CSVFile # CSVFile # ArrowFile
 
 # Case name
-case_name = "pglib_opf_case5_pjm" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
+case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
