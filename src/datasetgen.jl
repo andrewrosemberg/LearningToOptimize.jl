@@ -95,15 +95,18 @@ Save optimization problem instances to a file.
 function save(
     problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:FileType}
+    kys = keys(problem_iterator.pairs)
+    df = (;
+        id=problem_iterator.ids,
+    )
+    for ky in kys
+        df = merge(df, (; Symbol(ky) => problem_iterator.pairs[ky]))
+    end
     save(
-        (;
-            id=problem_iterator.ids,
-            zip(
-                Symbol.(name.(keys(problem_iterator.pairs))), values(problem_iterator.pairs)
-            )...,
-        ),
+        df,
         filename,
-        file_type,
+        file_type;
+        dictencode=true,
     )
     return nothing
 end

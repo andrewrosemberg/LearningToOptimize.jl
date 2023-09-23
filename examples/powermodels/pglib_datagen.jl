@@ -50,17 +50,18 @@ end
 function load_parameter_factory(model, indices; load_set=nothing)
     if isnothing(load_set)
         return @variable(
-            model, _p[i in indices]
+            model, _p[i=indices]
         )
     end
     return @variable(
-        model, _p[i in indices] in load_set
+        model, _p[i=indices] in load_set
     )
 end
 
 function pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing)
     num_loads = length(network_data["load"])
-    for (i, l) in enumerate(values(network_data["load"]))
+    for (str_i, l) in network_data["load"]
+        i = parse(Int, str_i)
         l["pd"] = parameters[i]
         l["qd"] = parameters[num_loads+i]
     end
@@ -106,7 +107,7 @@ function generate_dataset_pglib(
     case_name;
     filetype=CSVFile,
     num_p=10,
-    load_sampler=load_sampler,
+    internal_load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
     optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
     filterfn=L2O.filter_fn,
@@ -131,10 +132,10 @@ function generate_dataset_pglib(
     num_loads = length(network_data["load"])
     num_inputs = num_loads * 2
     original_load = vcat(
-        [l["pd"] for l in values(network_data["load"])],
-        [l["qd"] for l in values(network_data["load"])],
+        [network_data["load"]["$l"]["pd"] for l=1:num_loads],
+        [network_data["load"]["$l"]["qd"] for l=1:num_loads],
     )
-    p = load_parameter_factory(model, 1:(num_inputs); load_set=POI.Parameter.(original_load))
+    p = load_parameter_factory(model, 1:num_inputs; load_set=POI.Parameter.(original_load))
 
     # Build model and Recorder
     file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
@@ -144,7 +145,7 @@ function generate_dataset_pglib(
     # The problem iterator
     pairs = Dict{VariableRef, Vector{Float64}}()
     for i in 1:num_inputs
-        pairs[p[i]] = load_sampler(original_load[i], num_p, i, num_inputs)
+        pairs[p[i]] = internal_load_sampler(original_load[i], num_p, i, num_inputs)
     end
     problem_iterator = ProblemIterator(
         pairs;

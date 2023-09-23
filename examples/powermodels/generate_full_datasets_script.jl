@@ -36,7 +36,7 @@ path = joinpath(path_powermodels, "data")
 include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
 # Parameters
-filetype = CSVFile # CSVFile # ArrowFile
+filetype = ArrowFile # CSVFile # ArrowFile
 
 # Case name
 case_name = "pglib_opf_case5_pjm" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
@@ -51,7 +51,7 @@ mkpath(case_file_path)
 # for i in 1:num_batches
 #     _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(case_file_path, case_name; 
 #         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
-#         load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
+#         internal_load_sampler= (_o, n) -> load_sampler(_o, n, max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01)
 #     )
 #     global success_solves += _success_solves
 # end
@@ -71,10 +71,8 @@ num_batches = num_loads * 2 + 1
 num_p = 10
 
 function line_sampler(_o, n, idx, num_inputs, ibatc)
-    @info "ibatc: $(ibatc)" n idx num_inputs
     if (idx == ibatc) || (ibatc == num_inputs + 1)
-        @info "Minha vez" [_o * step_multiplier ^ j for j in 1:n]
-        return [_o * step_multiplier ^ j for j in 1:n]
+        return [_o * step_multiplier ^ (j-1) for j in 1:n]
     else
         return ones(n)
     end
@@ -85,7 +83,7 @@ global batch_id = string(uuid1())
 for ibatc in 1:num_batches
     _success_solves, number_variables, number_loads, b_id = generate_dataset_pglib(case_file_path, case_name; 
         num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
-        load_sampler= (_o, n, idx, num_inputs) -> line_sampler(_o, n, idx, num_inputs, ibatc),
+        internal_load_sampler= (_o, n, idx, num_inputs) -> line_sampler(_o, n, idx, num_inputs, ibatc),
         early_stop_fn=early_stop_fn,
         batch_id=batch_id,
     )

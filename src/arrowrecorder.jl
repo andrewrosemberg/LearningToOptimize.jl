@@ -39,9 +39,10 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
     )
 end
 
-function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
+function save(table::NamedTuple, filename::String, ::Type{ArrowFile}; kwargs...)
     Arrow.append(
         filename,
-        table,
+        table;
+        kwargs...
     )
 end

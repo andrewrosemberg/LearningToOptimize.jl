@@ -51,7 +51,14 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
     end
 end
 
-function save(table::NamedTuple, filename::String, ::Type{CSVFile})
-    CSV.write(filename, table; append=isfile(filename))
+function save(table::NamedTuple, filename::String, ::Type{CSVFile}; kwargs...)
+    isappend = isfile(filename)
+    mode = isappend ? "append" : "write"
+    @info "Saving CSV file to $filename - Mode: $mode"
+    if isappend
+        @warn "Appending to existing CSV file is NOT RECOMMENDED"
+        # CSV does not take into account the column names when appending
+    end
+    CSV.write(filename, table; append=isappend)
     return nothing
 end
