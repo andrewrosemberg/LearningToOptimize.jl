@@ -6,9 +6,22 @@ end
 
 filename(recorder_file::RecorderFile) = recorder_file.filename
 
-termination_status_filter(status) = status == MOI.OPTIMAL || status == MOI.SLOW_PROGRESS || status == MOI.LOCALLY_SOLVED || status == MOI.ITERATION_LIMIT
-primal_status_filter(status) = status == MOI.FEASIBLE_POINT
-dual_status_filter(status) = status == MOI.FEASIBLE_POINT
+const ACCEPTED_TERMINATION_STATUSES = [
+    MOI.OPTIMAL,
+    MOI.SLOW_PROGRESS,
+    MOI.LOCALLY_SOLVED,
+    MOI.ITERATION_LIMIT,
+    MOI.ALMOST_OPTIMAL,
+]
+
+DECISION_STATUS = [
+    MOI.FEASIBLE_POINT,
+    MOI.NEARLY_FEASIBLE_POINT
+]
+
+termination_status_filter(status) = in(status, ACCEPTED_TERMINATION_STATUSES)
+primal_status_filter(status) = in(status, DECISION_STATUS)
+dual_status_filter(status) = in(status, DECISION_STATUS)
 
 filter_fn(model) = termination_status_filter(termination_status(model)) && primal_status_filter(primal_status(model)) && dual_status_filter(dual_status(model))
 

@@ -67,14 +67,14 @@ network_data = make_basic_network(pglib(matpower_case_name))
 early_stop_fn = (model, status, recorder) -> !status
 step_multiplier = 1.01
 num_loads = length(network_data["load"])
-num_batches = num_loads * 2 + 1
-num_p = 10
+num_batches = num_loads + 1
+num_p = 2
 
 function line_sampler(_o, n, idx, num_inputs, ibatc)
-    if (idx == ibatc) || (ibatc == num_inputs + 1)
+    if (idx == ibatc) || (idx - num_loads == ibatc) || (ibatc == num_inputs + 1)
         return [_o * step_multiplier ^ (j-1) for j in 1:n]
     else
-        return ones(n)
+        return ones(n) * _o
     end
 end
 
