@@ -11,6 +11,7 @@ using L2O
 case_name = "pglib_opf_case5_pjm" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile
+path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
 
 # Load input and output data tables

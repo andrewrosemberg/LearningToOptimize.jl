@@ -95,7 +95,7 @@ Save optimization problem instances to a file.
 function save(
     problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:FileType}
-    kys = keys(problem_iterator.pairs)
+    kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
     df = (;
         id=problem_iterator.ids,
     )
