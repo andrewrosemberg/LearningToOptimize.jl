@@ -5,16 +5,18 @@ using Arrow
 using Flux
 using DataFrames
 using PowerModels
+using L2O
 
 # Paths
-path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
-case_name = "pglib_opf_case5_pjm"
+case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
+network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile
-network_formulation = DCPPowerModel
-case_file_path = joinpath(path, case_name, string(network_formulation))
+path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
+case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
 
 # Load input and output data tables
 iter_files = readdir(joinpath(case_file_path))
+iter_files = filter(x -> occursin(string(ArrowFile), x), iter_files)
 file_ins = [joinpath(case_file_path, file) for file in iter_files if occursin("input", file)]
 file_outs = [joinpath(case_file_path, file) for file in iter_files if occursin("output", file)]
 batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
@@ -39,6 +41,9 @@ output_data_test = DataFrame(output_table_test)
 # Separate input and output variables
 output_variables_train = output_data_train[!, Not(:id)]
 input_features_train = innerjoin(input_data_train, output_data_train[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+
+num_loads = floor(Int,size(input_features_train,2)/2)
+total_volume=[sum(sqrt(input_features_train[i,l]^2 + input_features_train[i,l+num_loads]^2) for l in 1:num_loads) for i in 1:size(input_features_train,1) ] 
 
 output_variables_test = output_data_test[!, Not(:id)]
 input_features_test = innerjoin(input_data_test, output_data_test[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
