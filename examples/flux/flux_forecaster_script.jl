@@ -49,32 +49,19 @@ output_variables_test = output_data_test[!, Not(:id)]
 input_features_test = innerjoin(input_data_test, output_data_test[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
 # Define model
-model = Chain(
-    Dense(size(input_features_train, 2), 64, relu),
-    Dense(64, 32, relu),
-    Dense(32, size(output_variables_train, 2)),
+model = MultitargetNeuralNetworkRegressor(
+    builder=FullyConnectedBuilder([64,32]),
+    rng=123,
+    epochs=20,
+    optimiser=ConvexRule(Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any, Any}()))
 )
 
-# Define loss function
-loss(x, y) = Flux.mse(model(x), y)
-
-# Convert the data to matrices
-input_features_train = Matrix(input_features_train)'
-output_variables_train = Matrix(output_variables_train)'
-
-input_features_test = Matrix(input_features_test)'
-output_variables_test = Matrix(output_variables_test)'
-
-# Define the optimizer
-optimizer = Flux.ADAM()
-
-# Train the model
-Flux.train!(
-    loss, Flux.params(model), [(input_features_train, output_variables_train)], optimizer
-)
+# Define the machine
+mach = machine(model, input_features, output_variables)
+fit!(mach, verbosity=2)
 
 # Make predictions
-predictions = model(input_features_test)
+predictions = predict(mach, input_features)
 
 # Calculate the error
 error = Flux.mse(predictions, output_variables_test)
