@@ -45,12 +45,12 @@ path = config["export_dir"]
 path_powermodels = joinpath(dirname(@__FILE__)) # TODO: Make it a submodule
 include(joinpath(path_powermodels, "pglib_datagen.jl"))
 
-filetype = ArrowFile
+filetype = ArrowFile # ArrowFile # CSVFile
 
 case_name = config["case_name"]
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
-network_formulation= eval(Symbol(ARGS[2]))
+network_formulation= eval(Symbol(ARGS[2])) # SOCWRConicPowerModel # DCPPowerModel
 
 ########## SAMPLER DATASET GENERATION ##########
 
