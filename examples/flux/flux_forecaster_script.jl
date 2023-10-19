@@ -10,7 +10,7 @@ using L2O
 # Paths
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
-filetype = ArrowFile
+filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
 
@@ -57,7 +57,7 @@ model = MultitargetNeuralNetworkRegressor(
 )
 
 # Define the machine
-mach = machine(model, input_features, output_variables)
+mach = machine(model, input_features_train, output_variables_train)
 fit!(mach, verbosity=2)
 
 # Make predictions

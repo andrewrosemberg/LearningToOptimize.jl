@@ -10,6 +10,7 @@ using UUIDs
 using Ipopt
 using MLJFlux
 using Flux
+using MLJ
 using CSV
 using DataFrames
 
