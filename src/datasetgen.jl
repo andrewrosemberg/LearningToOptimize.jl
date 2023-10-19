@@ -118,8 +118,7 @@ function save(
     save(
         df,
         filename,
-        file_type;
-        dictencode=true,
+        file_type
     )
     return nothing
 end

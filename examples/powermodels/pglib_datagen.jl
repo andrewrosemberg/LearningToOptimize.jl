@@ -20,13 +20,6 @@ function return_variablerefs(pm::AbstractPowerModel)
     )
 end
 
-function add_names_pm(pm::AbstractPowerModel)
-    variable_refs = return_variablerefs(pm)
-    for variableref in variable_refs
-        set_name(variableref, replace(name(variableref), "," => "_"))
-    end
-end
-
 """
     load_sampler(original_load::T, num_p::Int, max_multiplier::T=3.0, min_multiplier::T=0.0, step_multiplier::T=0.1)
 

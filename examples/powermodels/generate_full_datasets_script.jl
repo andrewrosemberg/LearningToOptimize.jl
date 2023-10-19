@@ -81,13 +81,11 @@ if haskey(config, "line_search")
     early_stop_fn = (model, status, recorder) -> !status
 
     global success_solves = 0.0
-    global batch_id = string(uuid1())
     for ibatc in 1:num_batches
         _success_solves, number_variables, number_loads, b_id = generate_dataset_pglib(case_file_path, case_name; 
             num_p=num_p, filetype=filetype, network_formulation=network_formulation, optimizer=POI_cached_optimizer,
             internal_load_sampler= (_o, n, idx, num_inputs) -> line_sampler(_o, n, idx, num_inputs, ibatc; step_multiplier=step_multiplier),
             early_stop_fn=early_stop_fn,
-            batch_id=batch_id,
         )
         global success_solves += _success_solves
     end
