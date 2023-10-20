@@ -9,6 +9,8 @@ Record optimization problem solution to a CSV file.
 """
 function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
     _filename = input ? filename_input(recorder) : filename(recorder)
+    _filename = _filename * "." * string(CSVFile)
+
     if !isfile(_filename)
         open(_filename, "w") do f
             write(f, "id")
@@ -52,6 +54,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
 end
 
 function save(table::NamedTuple, filename::String, ::Type{CSVFile}; kwargs...)
+    filename = filename * "." * string(CSVFile)
     isappend = isfile(filename)
     mode = isappend ? "append" : "write"
     @info "Saving CSV file to $filename - Mode: $mode"

@@ -172,7 +172,7 @@ function generate_dataset_pglib(
     p = load_parameter_factory(model, 1:num_inputs; load_set=POI.Parameter.(original_load))
 
     # Build model and Recorder
-    file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id)
     recorder = Recorder{filetype}(file; filterfn=filterfn)
     pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
 
@@ -188,7 +188,7 @@ function generate_dataset_pglib(
 
     save(
         problem_iterator,
-        joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype)),
+        joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id),
         filetype,
     )
 
@@ -235,8 +235,8 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
     @info "Batch ID: $batch_id"
 
     # File names
-    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
-    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id)
+    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id)
     recorder = Recorder{filetype}(
         file_output; filename_input=file_input,
         primal_variables=[], dual_variables=[]
@@ -331,8 +331,8 @@ function generate_worst_case_dataset(data_dir,
     )
 
     # File names
-    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
-    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id)
+    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id)
     recorder = Recorder{filetype}(
         file_output; filename_input=file_input,
         primal_variables=[], dual_variables=[]
