@@ -32,7 +32,13 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
         )...,
     )
     if !input
-        df=merge(df, (;objective=[JuMP.objective_value(model)]))
+        df=merge(df, (;
+            objective=[JuMP.objective_value(model)],
+            time=[JuMP.solve_time(model)],
+            status=[string(JuMP.termination_status(model))],
+            primal_status=[string(JuMP.primal_status(model))],
+            dual_status=[string(JuMP.dual_status(model))],
+        ))
     end
     
     return Arrow.write(

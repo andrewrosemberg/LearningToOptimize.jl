@@ -10,7 +10,7 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         output_data = CSV.read(file_out, DataFrame)
 
         # Separate input and output variables
-        output_variables = output_data[!, Not(:id)]
+        output_variables = output_data[!, Not([:id, :status, :primal_status, :dual_status])]
         input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
 
         # Define model

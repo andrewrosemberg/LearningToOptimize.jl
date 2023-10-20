@@ -87,7 +87,7 @@ end
 
 pm_primal_builder! is a function to help build a PowerModels model and update recorder.
 """
-function pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing)
+function pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing, record_duals=false)
     num_loads = length(network_data["load"])
     for (str_i, l) in network_data["load"]
         i = parse(Int, str_i)
@@ -100,7 +100,7 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
         network_data,
         network_formulation,
         PowerModels.build_opf;
-        setting=Dict("output" => Dict("duals" => true)),
+        setting=Dict("output" => Dict("branch_flows" => true, "duals" => true)),
         jump_model=model,
     )
 
@@ -110,7 +110,18 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
             set_name(variableref, replace(name(variableref), "," => "_"))
         end
         set_primal_variable!(recorder, variable_refs)
-        # set_dual_variable!(recorder, [cons for cons in values(pm["constraint"])])
+        if record_duals
+            # Bus
+            real_balance = [bus[:lam_kcl_r] for bus in values(PowerModels.sol(pm)[:bus])]
+            set_name.(real_balance, ["lam_kcl_r[$(i)]" for i in 1:length(real_balance)])
+            imag_balance = [bus[:lam_kcl_i] for bus in values(PowerModels.sol(pm)[:bus])]
+            if eltype(imag_balance) <: ConstraintRef
+                set_name.(imag_balance, ["lam_kcl_i[$(i)]" for i in 1:length(imag_balance)])
+                set_dual_variable!(recorder, vcat(real_balance, imag_balance))
+            else
+                set_dual_variable!(recorder, real_balance)
+            end
+        end
         return model, parameters, variable_refs
     end
 
@@ -174,7 +185,7 @@ function generate_dataset_pglib(
     # Build model and Recorder
     file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id)
     recorder = Recorder{filetype}(file; filterfn=filterfn)
-    pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
+    pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder, record_duals=true)
 
     # The problem iterator
     pairs = Dict{VariableRef, Vector{Float64}}()
@@ -194,7 +205,7 @@ function generate_dataset_pglib(
 
     # Solve the problem and return the number of successfull solves
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
+        length(recorder.primal_variables) + length(recorder.dual_variables),
         length(original_load),
         batch_id
 end
@@ -275,7 +286,7 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
 
     # Solve all problems and record solutions
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
+        length(recorder.primal_variables) + length(recorder.dual_variables),
         length(original_load),
         batch_id
 end
@@ -340,7 +351,7 @@ function generate_worst_case_dataset(data_dir,
 
     # Solve all problems and record solutions
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
+        length(recorder.primal_variables) + length(recorder.dual_variables),
         length(original_load),
         batch_id
 end
@@ -361,7 +372,7 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end
@@ -386,7 +397,7 @@ function test_generate_worst_case_dataset(path::AbstractString, case_name::Abstr
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) >= num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end
@@ -411,7 +422,7 @@ function test_generate_worst_case_dataset_Nonconvex(path::AbstractString, case_n
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) >= num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end

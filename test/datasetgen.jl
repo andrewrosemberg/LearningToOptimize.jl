@@ -69,7 +69,7 @@ function test_problem_iterator(path::AbstractString)
                 file_output = file_output * ".$(string(filetype))"
                 @test isfile(file_output)
                 @test length(readdlm(file_output, ',')[:, 1]) == num_p * successfull_solves + 1 # 1 from header
-                @test length(readdlm(file_output, ',')[1, :]) == 4
+                @test length(readdlm(file_output, ',')[1, :]) == 8
                 rm(file_output)
             else
                 iter_files = readdir(joinpath(path))
@@ -83,7 +83,7 @@ function test_problem_iterator(path::AbstractString)
                 rm.(file_ins)
                 # test output file
                 df = Arrow.Table(file_outs)
-                @test length(df) == 4
+                @test length(df) == 8
                 @test length(df[1]) == num_p * successfull_solves
                 rm.(file_outs)
             end

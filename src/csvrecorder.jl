@@ -22,6 +22,10 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             end
             if !input
                 write(f, ",objective")
+                write(f, ",time")
+                write(f, ",status")
+                write(f, ",primal_status")
+                write(f, ",dual_status")
             end
             write(f, "\n")
         end
@@ -45,8 +49,21 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             @error("Recorder has no variables")
         end
         if !input
+            # save objective value
             obj = JuMP.objective_value(model)
             write(f, ",$obj")
+            # save solve time
+            time = JuMP.solve_time(model)
+            write(f, ",$time")
+            # save status
+            status = JuMP.termination_status(model)
+            write(f, ",$status")
+            # save primal status
+            primal_status = JuMP.primal_status(model)
+            write(f, ",$primal_status")
+            # save dual status
+            dual_status = JuMP.dual_status(model)
+            write(f, ",$dual_status")
         end
         # end line
         write(f, "\n")
