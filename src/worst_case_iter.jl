@@ -7,7 +7,7 @@ function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
 
     # Solve the model
     status = false
-    try 
+    try
         JuMP.optimize!(model)
 
         status = filter_fn(model)
@@ -18,7 +18,7 @@ function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
     objective = if status
         JuMP.objective_value(model)
     else
-        - penalty
+        -penalty
     end
 
     return objective
@@ -39,11 +39,9 @@ mutable struct StorageCallbackObjective <: Function
     filter_fn::Function
     recorder::Recorder
 end
-StorageCallbackObjective(parameters, filter_fn, recorder) = StorageCallbackObjective(0, 0,
-    parameters,
-    filter_fn,
-    recorder
-)
+function StorageCallbackObjective(parameters, filter_fn, recorder)
+    return StorageCallbackObjective(0, 0, parameters, filter_fn, recorder)
+end
 
 function (callback::StorageCallbackObjective)(parameter_values)
     Zygote.@ignore callback.fcalls += 1
@@ -53,23 +51,29 @@ function (callback::StorageCallbackObjective)(parameter_values)
     Zygote.@ignore begin
         if obj > 0
             callback.success_solves += 1
-            id = uuid1(); record(callback.recorder, id); save_input(callback.parameters, callback.recorder, id)
+            id = uuid1()
+            record(callback.recorder, id)
+            save_input(callback.parameters, callback.recorder, id)
         end
     end
     Zygote.@ignore @info "Iter: $(callback.fcalls):" obj
-    return - obj
+    return -obj
 end
 
 function solve_and_record(
-    problem_iterator::WorstCaseProblemIterator{T}, recorder::Recorder, idx::Integer; maxiter=1000,
+    problem_iterator::WorstCaseProblemIterator{T},
+    recorder::Recorder,
+    idx::Integer;
+    maxiter=1000,
 ) where {T<:NonconvexCore.AbstractOptimizer}
     # Build Primal
-    model, parameters = problem_iterator.primal_builder!(;recorder=recorder)
-    (min_demands, max_demands, max_total_volume, starting_point) = problem_iterator.set_iterator!(idx)
+    model, parameters = problem_iterator.primal_builder!(; recorder=recorder)
+    (min_demands, max_demands, max_total_volume, starting_point) = problem_iterator.set_iterator!(
+        idx
+    )
 
     storage_objective_function = StorageCallbackObjective(
-        parameters, recorder.filterfn,
-        recorder
+        parameters, recorder.filterfn, recorder
     )
 
     if haskey(problem_iterator.ext, :best_solution)
@@ -78,13 +82,18 @@ function solve_and_record(
 
     # Build Nonconvex optimization model:
     model_non = Nonconvex.Model()
-    set_objective!(model_non, storage_objective_function, flags = [:expensive])
+    set_objective!(model_non, storage_objective_function; flags=[:expensive])
     addvar!(model_non, min_demands, max_demands)
     # add_ineq_constraint!(model_non, x -> sum(x .^ 2) - max_total_volume ^ 2)
 
     # Optimize model_non:
     r_Nonconvex = if !isnothing(problem_iterator.options)
-        optimize(model_non, problem_iterator.optimizer, starting_point; options = problem_iterator.options)
+        optimize(
+            model_non,
+            problem_iterator.optimizer,
+            starting_point;
+            options=problem_iterator.options,
+        )
     else
         optimize(model_non, problem_iterator.optimizer, starting_point)
     end
@@ -92,5 +101,6 @@ function solve_and_record(
     problem_iterator.ext[:best_solution] = r_Nonconvex.minimizer
     # best_profit = -r_Nonconvex.minimum
 
-    return storage_objective_function.success_solves / storage_objective_function.fcalls, false
+    return storage_objective_function.success_solves / storage_objective_function.fcalls,
+    false
 end

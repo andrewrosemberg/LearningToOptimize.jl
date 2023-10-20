@@ -11,19 +11,21 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
 
         # Separate input and output variables
         output_variables = output_data[!, Not([:id, :status, :primal_status, :dual_status])]
-        input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+        input_features = innerjoin(input_data, output_data[!, [:id]]; on=:id)[!, Not(:id)] # just use success solves
 
         # Define model
-        model = MultitargetNeuralNetworkRegressor(
-            builder=FullyConnectedBuilder([64,32]),
+        model = MultitargetNeuralNetworkRegressor(;
+            builder=FullyConnectedBuilder([64, 32]),
             rng=123,
             epochs=20,
-            optimiser=ConvexRule(Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any, Any}()))
+            optimiser=ConvexRule(
+                Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+            ),
         )
 
         # Define the machine
         mach = machine(model, input_features, output_variables)
-        fit!(mach, verbosity=2)
+        fit!(mach; verbosity=2)
 
         # Make predictions
         predictions = predict(mach, input_features)

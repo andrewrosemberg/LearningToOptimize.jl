@@ -4,7 +4,8 @@
 Test dataset generation using the worst case problem iterator for different filetypes.
 """
 function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
-    @testset "Worst Case Dual Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
+    @testset "Worst Case Dual Generation Type: $filetype" for filetype in
+                                                              [CSVFile, ArrowFile]
         # The problem to iterate over
         function optimizer_factory()
             return () -> Ipopt.Optimizer()
@@ -40,10 +41,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input,
-            primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
         )
-        
+
         # Solve all problems and record solutions
         successfull_solves = solve_batch(problem_iterator, recorder)
 
@@ -54,7 +54,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             @test isfile(file_input)
             @test isfile(file_output)
             # test input file
-            @test length(readdlm(file_input, ',')[:, 1]) >= num_p *successfull_solves + 1
+            @test length(readdlm(file_input, ',')[:, 1]) >= num_p * successfull_solves + 1
             @test length(readdlm(file_input, ',')[1, :]) == 2
             rm(file_input)
             # test output file
@@ -64,8 +64,14 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         else
             iter_files = readdir(joinpath(path))
             iter_files = filter(x -> occursin(string(filetype), x), iter_files)
-            file_outs = [joinpath(path, file) for file in iter_files if occursin("$(batch_id)_output", file)]
-            file_ins = [joinpath(path, file) for file in iter_files if occursin("$(batch_id)_input", file)]
+            file_outs = [
+                joinpath(path, file) for
+                file in iter_files if occursin("$(batch_id)_output", file)
+            ]
+            file_ins = [
+                joinpath(path, file) for
+                file in iter_files if occursin("$(batch_id)_input", file)
+            ]
             # test input file
             df = Arrow.Table(file_ins)
             @test length(df) == 2 # 2 parameter
@@ -79,8 +85,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         end
     end
 
-    @testset "Worst Case NonConvex Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
-        function _primal_builder!(;recorder=nothing)
+    @testset "Worst Case NonConvex Generation Type: $filetype" for filetype in
+                                                                   [CSVFile, ArrowFile]
+        function _primal_builder!(; recorder=nothing)
             model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
             parameters = @variable(model, _p in POI.Parameter(1.0))
             @variable(model, x)
@@ -108,7 +115,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             _primal_builder!,
             _set_iterator!,
             NLoptAlg(:LN_BOBYQA);
-            options = NLoptOptions(maxeval=10)
+            options=NLoptOptions(; maxeval=10),
         )
 
         # file_names
@@ -118,10 +125,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input,
-            primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
         )
-        
+
         # Solve all problems and record solutions
         successfull_solves = solve_batch(problem_iterator, recorder)
 
@@ -142,8 +148,14 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         else
             iter_files = readdir(joinpath(path))
             iter_files = filter(x -> occursin(string(filetype), x), iter_files)
-            file_outs = [joinpath(path, file) for file in iter_files if occursin("$(batch_id)_output", file)]
-            file_ins = [joinpath(path, file) for file in iter_files if occursin("$(batch_id)_input", file)]
+            file_outs = [
+                joinpath(path, file) for
+                file in iter_files if occursin("$(batch_id)_output", file)
+            ]
+            file_ins = [
+                joinpath(path, file) for
+                file in iter_files if occursin("$(batch_id)_input", file)
+            ]
             # test input file
             df = Arrow.Table(file_ins)
             @test length(df) == 2 # 2 parameter

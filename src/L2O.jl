@@ -18,9 +18,20 @@ using Flux: @functor
 using Random
 import MLJFlux.train!
 
-export ArrowFile, CSVFile, ProblemIterator, Recorder, save, solve_batch, 
-    WorstCaseProblemIterator, set_primal_variable!, set_dual_variable!,
-    FullyConnected, FullyConnectedBuilder, make_convex!, make_convex, ConvexRule
+export ArrowFile,
+    CSVFile,
+    ProblemIterator,
+    Recorder,
+    save,
+    solve_batch,
+    WorstCaseProblemIterator,
+    set_primal_variable!,
+    set_dual_variable!,
+    FullyConnected,
+    FullyConnectedBuilder,
+    make_convex!,
+    make_convex,
+    ConvexRule
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
