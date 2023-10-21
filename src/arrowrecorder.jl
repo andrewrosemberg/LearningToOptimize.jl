@@ -10,6 +10,8 @@ Record optimization problem solution to an Arrow file.
 function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
     _filename = input ? filename_input(recorder) : filename(recorder)
 
+    _filename = _filename * "_$(string(id))." * string(ArrowFile)
+
     model = if length(recorder.primal_variables) > 0
         owner_model(recorder.primal_variables[1])
     elseif length(recorder.dual_variables) > 0
@@ -30,19 +32,22 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
         )...,
     )
     if !input
-        df=merge(df, (;objective=[JuMP.objective_value(model)]))
+        df = merge(
+            df,
+            (;
+                objective=[JuMP.objective_value(model)],
+                time=[JuMP.solve_time(model)],
+                status=[string(JuMP.termination_status(model))],
+                primal_status=[string(JuMP.primal_status(model))],
+                dual_status=[string(JuMP.dual_status(model))],
+            ),
+        )
     end
-    
-    return Arrow.append(
-        _filename,
-        df,
-    )
+
+    return Arrow.write(_filename, df)
 end
 
-function save(table::NamedTuple, filename::String, ::Type{ArrowFile}; kwargs...)
-    Arrow.append(
-        filename,
-        table;
-        kwargs...
-    )
+function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
+    filename = filename * "." * string(ArrowFile)
+    return Arrow.write(filename, table)
 end

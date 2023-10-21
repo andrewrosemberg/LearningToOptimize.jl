@@ -14,16 +14,17 @@ const ACCEPTED_TERMINATION_STATUSES = [
     MOI.ALMOST_OPTIMAL,
 ]
 
-DECISION_STATUS = [
-    MOI.FEASIBLE_POINT,
-    MOI.NEARLY_FEASIBLE_POINT
-]
+DECISION_STATUS = [MOI.FEASIBLE_POINT, MOI.NEARLY_FEASIBLE_POINT]
 
 termination_status_filter(status) = in(status, ACCEPTED_TERMINATION_STATUSES)
 primal_status_filter(status) = in(status, DECISION_STATUS)
 dual_status_filter(status) = in(status, DECISION_STATUS)
 
-filter_fn(model) = termination_status_filter(termination_status(model)) && primal_status_filter(primal_status(model)) && dual_status_filter(dual_status(model))
+function filter_fn(model)
+    return termination_status_filter(termination_status(model)) &&
+           primal_status_filter(primal_status(model)) &&
+           dual_status_filter(dual_status(model))
+end
 
 """
     Recorder(filename; primal_variables=[], dual_variables=[], filterfn=(model)-> termination_status(model) == MOI.OPTIMAL)
@@ -44,7 +45,13 @@ mutable struct Recorder{T<:FileType}
         dual_variables=[],
         filterfn=filter_fn,
     ) where {T<:FileType}
-        return new{T}(RecorderFile{T}(filename), RecorderFile{T}(filename_input), primal_variables, dual_variables, filterfn)
+        return new{T}(
+            RecorderFile{T}(filename),
+            RecorderFile{T}(filename_input),
+            primal_variables,
+            dual_variables,
+            filterfn,
+        )
     end
 end
 
@@ -56,7 +63,7 @@ get_filterfn(recorder::Recorder) = recorder.filterfn
 
 function similar(recorder::Recorder{T}) where {T<:FileType}
     return Recorder{T}(
-        filename(recorder); 
+        filename(recorder);
         filename_input=filename_input(recorder),
         primal_variables=get_primal_variables(recorder),
         dual_variables=get_dual_variables(recorder),
@@ -65,11 +72,11 @@ function similar(recorder::Recorder{T}) where {T<:FileType}
 end
 
 function set_primal_variable!(recorder::Recorder, p::Vector)
-    recorder.primal_variables = p
+    return recorder.primal_variables = p
 end
 
 function set_dual_variable!(recorder::Recorder, p::Vector)
-    recorder.dual_variables = p
+    return recorder.dual_variables = p
 end
 
 abstract type AbstractProblemIterator end
@@ -85,7 +92,9 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     pairs::Dict{VariableRef,Vector{T}}
     early_stop::Function
     function ProblemIterator(
-        ids::Vector{UUID}, pairs::Dict{VariableRef,Vector{T}}, early_stop::Function=(args...) -> false
+        ids::Vector{UUID},
+        pairs::Dict{VariableRef,Vector{T}},
+        early_stop::Function=(args...) -> false,
     ) where {T<:Real}
         model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
@@ -95,7 +104,9 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     end
 end
 
-function ProblemIterator(pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false) where {T<:Real}
+function ProblemIterator(
+    pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false
+) where {T<:Real}
     ids = [uuid1() for _ in 1:length(first(values(pairs)))]
     return ProblemIterator(ids, pairs, early_stop)
 end
@@ -109,18 +120,11 @@ function save(
     problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
 ) where {T<:FileType}
     kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
-    df = (;
-        id=problem_iterator.ids,
-    )
+    df = (; id=problem_iterator.ids,)
     for ky in kys
         df = merge(df, (; Symbol(ky) => problem_iterator.pairs[ky]))
     end
-    save(
-        df,
-        filename,
-        file_type;
-        dictencode=true,
-    )
+    save(df, filename, file_type)
     return nothing
 end
 
@@ -169,9 +173,7 @@ end
 
 Solve a batch of optimization problems and record the solutions.
 """
-function solve_batch(
-    problem_iterator::AbstractProblemIterator, recorder
-)
+function solve_batch(problem_iterator::AbstractProblemIterator, recorder)
     successfull_solves = 0.0
     for idx in 1:length(problem_iterator.ids)
         _success_bool, early_stop_bool = solve_and_record(problem_iterator, recorder, idx)

@@ -20,13 +20,6 @@ function return_variablerefs(pm::AbstractPowerModel)
     )
 end
 
-function add_names_pm(pm::AbstractPowerModel)
-    variable_refs = return_variablerefs(pm)
-    for variableref in variable_refs
-        set_name(variableref, replace(name(variableref), "," => "_"))
-    end
-end
-
 """
     load_sampler(original_load::T, num_p::Int, max_multiplier::T=3.0, min_multiplier::T=0.0, step_multiplier::T=0.1)
 
@@ -40,7 +33,7 @@ function load_sampler(
     max_multiplier::T=2.5,
     min_multiplier::T=0.0,
     step_multiplier::T=0.1,
-) where {T<:Real, F<:Integer}
+) where {T<:Real,F<:Integer}
     # Load sampling
     load_samples =
         original_load * rand(min_multiplier:step_multiplier:max_multiplier, num_p)
@@ -57,17 +50,19 @@ line_sampler is a function to help generate a dataset for varying parameter valu
     Return an incremental vector for all parameters. 
 """
 function line_sampler(
-    original_parameter::T, 
-    num_p::F, 
-    parameter_index::F, 
-    num_inputs::F, 
-    line_index::F; 
+    original_parameter::T,
+    num_p::F,
+    parameter_index::F,
+    num_inputs::F,
+    line_index::F;
     step_multiplier::T=1.01,
-)  where {T<:Real, F<:Integer}
+) where {T<:Real,F<:Integer}
     # parameter sampling
     num_parameters = floor(Int, num_inputs / 2)
-    if (parameter_index == line_index) || (parameter_index - num_parameters == line_index) || (line_index == num_inputs + 1)
-        return [original_parameter * step_multiplier ^ (j) for j in 1:num_p]
+    if (parameter_index == line_index) ||
+        (parameter_index - num_parameters == line_index) ||
+        (line_index == num_inputs + 1)
+        return [original_parameter * step_multiplier^(j) for j in 1:num_p]
     else
         return ones(num_p) * original_parameter
     end
@@ -80,13 +75,9 @@ load_parameter_factory is a function to help generate a parameter vector for the
 """
 function load_parameter_factory(model, indices; load_set=nothing)
     if isnothing(load_set)
-        return @variable(
-            model, _p[i=indices]
-        )
+        return @variable(model, _p[i=indices])
     end
-    return @variable(
-        model, _p[i=indices] in load_set
-    )
+    return @variable(model, _p[i=indices] in load_set)
 end
 
 """
@@ -94,12 +85,19 @@ end
 
 pm_primal_builder! is a function to help build a PowerModels model and update recorder.
 """
-function pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=nothing)
+function pm_primal_builder!(
+    model,
+    parameters,
+    network_data,
+    network_formulation;
+    recorder=nothing,
+    record_duals=false,
+)
     num_loads = length(network_data["load"])
     for (str_i, l) in network_data["load"]
         i = parse(Int, str_i)
         l["pd"] = parameters[i]
-        l["qd"] = parameters[num_loads+i]
+        l["qd"] = parameters[num_loads + i]
     end
 
     # Instantiate the model
@@ -107,7 +105,7 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
         network_data,
         network_formulation,
         PowerModels.build_opf;
-        setting=Dict("output" => Dict("duals" => true)),
+        setting=Dict("output" => Dict("branch_flows" => true, "duals" => true)),
         jump_model=model,
     )
 
@@ -117,7 +115,18 @@ function pm_primal_builder!(model, parameters, network_data, network_formulation
             set_name(variableref, replace(name(variableref), "," => "_"))
         end
         set_primal_variable!(recorder, variable_refs)
-        # set_dual_variable!(recorder, [cons for cons in values(pm["constraint"])])
+        if record_duals
+            # Bus
+            real_balance = [bus[:lam_kcl_r] for bus in values(PowerModels.sol(pm)[:bus])]
+            set_name.(real_balance, ["lam_kcl_r[$(i)]" for i in 1:length(real_balance)])
+            imag_balance = [bus[:lam_kcl_i] for bus in values(PowerModels.sol(pm)[:bus])]
+            if eltype(imag_balance) <: ConstraintRef
+                set_name.(imag_balance, ["lam_kcl_i[$(i)]" for i in 1:length(imag_balance)])
+                set_dual_variable!(recorder, vcat(real_balance, imag_balance))
+            else
+                set_dual_variable!(recorder, real_balance)
+            end
+        end
         return model, parameters, variable_refs
     end
 
@@ -150,10 +159,10 @@ function generate_dataset_pglib(
     num_p=10,
     internal_load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
-    optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
+    optimizer=() -> POI.Optimizer(HiGHS.Optimizer()),
     filterfn=L2O.filter_fn,
-    early_stop_fn = (model, status, recorder) -> false,
-    batch_id = string(uuid1())
+    early_stop_fn=(model, status, recorder) -> false,
+    batch_id=string(uuid1()),
 )
     @info "Batch ID: $batch_id"
 
@@ -173,47 +182,52 @@ function generate_dataset_pglib(
     num_loads = length(network_data["load"])
     num_inputs = num_loads * 2
     original_load = vcat(
-        [network_data["load"]["$l"]["pd"] for l=1:num_loads],
-        [network_data["load"]["$l"]["qd"] for l=1:num_loads],
+        [network_data["load"]["$l"]["pd"] for l in 1:num_loads],
+        [network_data["load"]["$l"]["qd"] for l in 1:num_loads],
     )
     p = load_parameter_factory(model, 1:num_inputs; load_set=POI.Parameter.(original_load))
 
     # Build model and Recorder
-    file = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file = joinpath(
+        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+    )
     recorder = Recorder{filetype}(file; filterfn=filterfn)
-    pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
+    pm_primal_builder!(
+        model, p, network_data, network_formulation; recorder=recorder, record_duals=true
+    )
 
     # The problem iterator
-    pairs = Dict{VariableRef, Vector{Float64}}()
+    pairs = Dict{VariableRef,Vector{Float64}}()
     for i in 1:num_inputs
         pairs[p[i]] = internal_load_sampler(original_load[i], num_p, i, num_inputs)
     end
-    problem_iterator = ProblemIterator(
-        pairs;
-        early_stop=early_stop_fn
-    )
+    problem_iterator = ProblemIterator(pairs; early_stop=early_stop_fn)
 
     save(
         problem_iterator,
-        joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype)),
+        joinpath(
+            data_sim_dir,
+            case_name * "_" * string(network_formulation) * "_input_" * batch_id,
+        ),
         filetype,
     )
 
     # Solve the problem and return the number of successfull solves
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
-        length(original_load),
-        batch_id
+    length(recorder.primal_variables) + length(recorder.dual_variables),
+    length(original_load),
+    batch_id
 end
 
-function generate_worst_case_dataset_Nonconvex(data_dir,
+function generate_worst_case_dataset_Nonconvex(
+    data_dir,
     case_name;
     filetype=CSVFile,
     num_p=10,
     network_formulation=DCPPowerModel,
-    optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
-    algorithm = NLoptAlg(:LN_BOBYQA),
-    options = NLoptOptions(maxeval=10),
+    optimizer=() -> POI.Optimizer(HiGHS.Optimizer()),
+    algorithm=NLoptAlg(:LN_BOBYQA),
+    options=NLoptOptions(; maxeval=10),
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -235,28 +249,35 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
         [l["pd"] for l in values(network_data["load"])],
         [l["qd"] for l in values(network_data["load"])],
     )
-    p = load_parameter_factory(model, 1:(num_loads * 2); load_set=POI.Parameter.(original_load))
-    
+    p = load_parameter_factory(
+        model, 1:(num_loads * 2); load_set=POI.Parameter.(original_load)
+    )
+
     # Define batch id
     batch_id = string(uuid1())
     @info "Batch ID: $batch_id"
 
     # File names
-    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
-    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file_input = joinpath(
+        data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id
+    )
+    file_output = joinpath(
+        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+    )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input,
-        primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
     )
 
     # Build model
-    model, parameters, variable_refs = pm_primal_builder!(model, p, network_data, network_formulation; recorder=recorder)
-    function _primal_builder!(;recorder=nothing)
+    model, parameters, variable_refs = pm_primal_builder!(
+        model, p, network_data, network_formulation; recorder=recorder
+    )
+    function _primal_builder!(; recorder=nothing)
         if !isnothing(recorder)
             set_primal_variable!(recorder, variable_refs)
         end
 
-       return model, parameters
+        return model, parameters
     end
 
     # Set iterator
@@ -265,7 +286,7 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
         _max_demands = original_load .+ ones(num_loads * 2) .* 0.1 * idx
         min_demands = min.(_min_demands, _max_demands)
         max_demands = max.(_min_demands, _max_demands)
-        max_total_volume = (norm(max_demands, 2) + norm(min_demands, 2)) ^ 2
+        max_total_volume = (norm(max_demands, 2) + norm(min_demands, 2))^2
         starting_point = original_load
         return min_demands, max_demands, max_total_volume, starting_point
     end
@@ -277,27 +298,28 @@ function generate_worst_case_dataset_Nonconvex(data_dir,
         _primal_builder!,
         _set_iterator!,
         algorithm;
-        options = options
+        options=options,
     )
 
     # Solve all problems and record solutions
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
-        length(original_load),
-        batch_id
+    length(recorder.primal_variables) + length(recorder.dual_variables),
+    length(original_load),
+    batch_id
 end
 
 function default_optimizer_factory()
     return () -> Ipopt.Optimizer()
 end
 
-function generate_worst_case_dataset(data_dir,
+function generate_worst_case_dataset(
+    data_dir,
     case_name;
     filetype=CSVFile,
     num_p=10,
     network_formulation=DCPPowerModel,
-    optimizer_factory = default_optimizer_factory,
-    hook = nothing
+    optimizer_factory=default_optimizer_factory,
+    hook=nothing,
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -322,10 +344,15 @@ function generate_worst_case_dataset(data_dir,
     @info "Batch ID: $batch_id"
 
     # Build model
-    primal_builder! = (model, parameters; recorder=nothing) -> pm_primal_builder!(model, parameters, network_data, network_formulation; recorder=recorder)
+    primal_builder! =
+        (model, parameters; recorder=nothing) -> pm_primal_builder!(
+            model, parameters, network_data, network_formulation; recorder=recorder
+        )
 
     # Set iterator
-    set_iterator! = (model, parameters, idx) -> load_set_iterator!(model, parameters, idx, original_load)
+    set_iterator! =
+        (model, parameters, idx) ->
+            load_set_iterator!(model, parameters, idx, original_load)
 
     # The problem iterator
     problem_iterator = WorstCaseProblemIterator(
@@ -334,22 +361,25 @@ function generate_worst_case_dataset(data_dir,
         primal_builder!,
         set_iterator!,
         optimizer_factory;
-        hook=hook
+        hook=hook,
     )
 
     # File names
-    file_input = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id * "." * string(filetype))
-    file_output = joinpath(data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id * "." * string(filetype))
+    file_input = joinpath(
+        data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id
+    )
+    file_output = joinpath(
+        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+    )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input,
-        primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
     )
 
     # Solve all problems and record solutions
     return solve_batch(problem_iterator, recorder),
-        length(recorder.primal_variables),
-        length(original_load),
-        batch_id
+    length(recorder.primal_variables) + length(recorder.dual_variables),
+    length(original_load),
+    batch_id
 end
 
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
@@ -358,8 +388,16 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         success_solves, number_variables, number_parameters, batch_id = generate_dataset_pglib(
             path, case_name; num_p=num_p, network_formulation=network_formulation
         )
-        file_in = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv")
-        file_out = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv")
+        file_in = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv",
+        )
+        file_out = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv",
+        )
         # Check if problem iterator was saved
         @test isfile(file_in)
         @test length(readdlm(file_in, ',')[:, 1]) == num_p + 1
@@ -368,13 +406,15 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end
 end
 
-function test_generate_worst_case_dataset(path::AbstractString, case_name::AbstractString, num_p::Int)
+function test_generate_worst_case_dataset(
+    path::AbstractString, case_name::AbstractString, num_p::Int
+)
     @testset "Worst Case Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
         # Improve dataset
@@ -382,24 +422,34 @@ function test_generate_worst_case_dataset(path::AbstractString, case_name::Abstr
             path, case_name; num_p=num_p, network_formulation=network_formulation
         )
 
-        file_in = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv")
-        file_out = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv")
+        file_in = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv",
+        )
+        file_out = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv",
+        )
 
         # Check if problem iterator was saved
         @test isfile(file_in)
-        @test length(readdlm(file_in, ',')[:, 1]) >=  num_p * success_solves + 1
+        @test length(readdlm(file_in, ',')[:, 1]) >= num_p * success_solves + 1
         @test length(readdlm(file_in, ',')[1, :]) == 1 + number_parameters
 
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) >= num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end
 end
 
-function test_generate_worst_case_dataset_Nonconvex(path::AbstractString, case_name::AbstractString, num_p::Int)
+function test_generate_worst_case_dataset_Nonconvex(
+    path::AbstractString, case_name::AbstractString, num_p::Int
+)
     @testset "WC Nonconvex Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
         # Improve dataset
@@ -407,18 +457,26 @@ function test_generate_worst_case_dataset_Nonconvex(path::AbstractString, case_n
             path, case_name; num_p=num_p, network_formulation=network_formulation
         )
 
-        file_in = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv")
-        file_out = joinpath(path, string(network_formulation), case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv")
+        file_in = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_input_" * batch_id * ".csv",
+        )
+        file_out = joinpath(
+            path,
+            string(network_formulation),
+            case_name * "_" * string(network_formulation) * "_output_" * batch_id * ".csv",
+        )
 
         # Check if problem iterator was saved
         @test isfile(file_in)
-        @test length(readdlm(file_in, ',')[:, 1]) >=  num_p * success_solves + 1
+        @test length(readdlm(file_in, ',')[:, 1]) >= num_p * success_solves + 1
         @test length(readdlm(file_in, ',')[1, :]) == 1 + number_parameters
 
         # Check if the number of successfull solves is equal to the number of problems saved
         @test isfile(file_out)
         @test length(readdlm(file_out, ',')[:, 1]) >= num_p * success_solves + 1
-        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 2
+        @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
         return file_in, file_out
     end

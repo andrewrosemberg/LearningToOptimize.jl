@@ -9,6 +9,8 @@ Record optimization problem solution to a CSV file.
 """
 function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
     _filename = input ? filename_input(recorder) : filename(recorder)
+    _filename = _filename * "." * string(CSVFile)
+
     if !isfile(_filename)
         open(_filename, "w") do f
             write(f, "id")
@@ -20,6 +22,10 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             end
             if !input
                 write(f, ",objective")
+                write(f, ",time")
+                write(f, ",status")
+                write(f, ",primal_status")
+                write(f, ",dual_status")
             end
             write(f, "\n")
         end
@@ -43,8 +49,21 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             @error("Recorder has no variables")
         end
         if !input
+            # save objective value
             obj = JuMP.objective_value(model)
             write(f, ",$obj")
+            # save solve time
+            time = JuMP.solve_time(model)
+            write(f, ",$time")
+            # save status
+            status = JuMP.termination_status(model)
+            write(f, ",$status")
+            # save primal status
+            primal_status = JuMP.primal_status(model)
+            write(f, ",$primal_status")
+            # save dual status
+            dual_status = JuMP.dual_status(model)
+            write(f, ",$dual_status")
         end
         # end line
         write(f, "\n")
@@ -52,6 +71,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
 end
 
 function save(table::NamedTuple, filename::String, ::Type{CSVFile}; kwargs...)
+    filename = filename * "." * string(CSVFile)
     isappend = isfile(filename)
     mode = isappend ? "append" : "write"
     @info "Saving CSV file to $filename - Mode: $mode"
