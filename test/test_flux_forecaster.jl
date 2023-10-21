@@ -4,7 +4,9 @@
 Test the Flux.jl forecaster using MLJ and MLJFlux to train the neural network.
 """
 function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
-    @testset "Flux.jl" begin
+    @testset "Flux.jl & MLJ.jl" begin
+        @test sprint(show, FullyConnected(1, [1], 1)) == "FullyConnected(\n     Layers: PairwiseFusion(vcat, Dense(1 => 1, relu), Dense(2 => 1)),\n     Pass-Through: Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}[Dense(1 => 1)]\n)\n"
+
         # read input and output data
         input_data = CSV.read(file_in, DataFrame)
         output_data = CSV.read(file_out, DataFrame)
