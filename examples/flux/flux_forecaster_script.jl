@@ -3,26 +3,32 @@ TestEnv.activate()
 
 using Arrow
 using CSV
+using MLJFlux
 using Flux
+using MLJ
 using DataFrames
 using PowerModels
 using L2O
 
 # Paths
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
-network_formulation = SOCWRConicPowerModel # SOCWRConicPowerModel # DCPPowerModel
+network_formulation = DCPPowerModel # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
-case_file_path = joinpath(path_dataset, case_name, string(network_formulation))
+case_file_path = joinpath(path_dataset, case_name)
+case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
+case_file_path_input = joinpath(case_file_path, "input")
 
 # Load input and output data tables
-iter_files = readdir(joinpath(case_file_path))
-iter_files = filter(x -> occursin(string(filetype), x), iter_files)
+iter_files_in = readdir(joinpath(case_file_path_input))
+iter_files_in = filter(x -> occursin(string(filetype), x), iter_files_in)
 file_ins = [
-    joinpath(case_file_path, file) for file in iter_files if occursin("input", file)
+    joinpath(case_file_path_input, file) for file in iter_files_in if occursin("input", file)
 ]
+iter_files_out = readdir(joinpath(case_file_path_output))
+iter_files_out = filter(x -> occursin(string(filetype), x), iter_files_out)
 file_outs = [
-    joinpath(case_file_path, file) for file in iter_files if occursin("output", file)
+    joinpath(case_file_path_output, file) for file in iter_files_out if occursin("output", file)
 ]
 batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 
