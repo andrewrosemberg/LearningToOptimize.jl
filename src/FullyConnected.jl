@@ -117,3 +117,22 @@ function MLJFlux.train!(
     end
     return training_loss / n_batches
 end
+
+function train!(model, optimiser, X, Y)
+    X = X |> gpu
+    Y = Y |> gpu
+    opt_state = Flux.setup(optimiser, model)
+    data = Flux.DataLoader((X, Y), 
+        batchsize=32, shuffle=true
+    )
+    for d in data
+		∇model, _ = gradient(model, d...) do m, x, y  # calculate the gradients
+			loss(m(x), y)
+		end;
+		# insert what ever code you want here that needs gradient
+		# E.g. logging with TensorBoardLogger.jl as histogram so you can see if it is becoming huge
+		opt_state, model = Optimisers.update(opt_state, model, ∇model)
+		# Here you might like to check validation set accuracy, and break out to do early stopping
+	end
+    return loss(model(X'), Y')
+end
