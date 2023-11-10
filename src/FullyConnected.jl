@@ -118,7 +118,7 @@ function MLJFlux.train!(
     return training_loss / n_batches
 end
 
-function train!(model, optimiser, X, Y)
+function train!(model, loss, optimiser, X, Y)
     X = X |> gpu
     Y = Y |> gpu
     opt_state = Flux.setup(optimiser, model)
@@ -134,5 +134,5 @@ function train!(model, optimiser, X, Y)
 		opt_state, model = Optimisers.update(opt_state, model, ∇model)
 		# Here you might like to check validation set accuracy, and break out to do early stopping
 	end
-    return loss(model(X'), Y')
+    return loss(model(X), Y)
 end

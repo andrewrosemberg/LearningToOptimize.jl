@@ -10,6 +10,7 @@ using MLJ
 using L2O
 using JuMP
 using CUDA
+using Logging
 
 include("examples/powermodels/powermodels.jl")
 
@@ -35,13 +36,13 @@ a_diff = va_fr - va_to
 f_owms_val = f_owms.(vm_fr, vm_to, va_fr, va_to)
 # plt = scatter(a_diff, [i[1] for i in f_owms_val], label="p_fr", xlabel="θ_fr - θ_to", ylabel="flow", legend=:outertopright);
 # scatter!(plt, a_diff, [i[2] for i in f_owms_val], label="q_fr");
-
+optimiser=Flux.Optimise.Adam()
 # Define Model
 # model = MultitargetNeuralNetworkRegressor(;
 #     builder=FullyConnectedBuilder([32, 64]),
 #     rng=123,
 #     epochs=10,
-#     optimiser=Flux.Optimise.Adam(),
+#     optimiser=optimiser,
 #     acceleration=CUDALibs(),
 # )
 
@@ -51,8 +52,14 @@ _va_fr, _va_to = rand(branch["angmin"]:0.0001:branch["angmax"], num_samples), ra
 X = [_vm_fr _vm_to _va_fr _va_to]
 y = [i[1] for i in f_owms_val][:,:]
 
+loss = Flux.mse
 model = FullyConnected(4, [4, 4], 1)
-train!(model, optimiser, X', Y')
+for ep in 1:100000
+    epochloss = train!(model, loss, optimiser, X', y')
+    if ep % 100 == 0
+        @info("Epoch $ep, loss = $epochloss")
+    end
+end
 
 # mach = machine(model, X, y)
 # fit!(mach; verbosity=2)
