@@ -118,12 +118,11 @@ function MLJFlux.train!(
     return training_loss / n_batches
 end
 
-function train!(model, loss, optimiser, X, Y)
+function train!(model, loss, opt_state, X, Y; batchsize=32, shuffle=true)
     X = X |> gpu
     Y = Y |> gpu
-    opt_state = Flux.setup(optimiser, model)
     data = Flux.DataLoader((X, Y), 
-        batchsize=32, shuffle=true
+        batchsize=batchsize, shuffle=shuffle
     )
     for d in data
 		∇model, _ = gradient(model, d...) do m, x, y  # calculate the gradients

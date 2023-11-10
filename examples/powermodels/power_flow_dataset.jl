@@ -54,8 +54,9 @@ y = [i[1] for i in f_owms_val][:,:]
 
 loss = Flux.mse
 model = FullyConnected(4, [4, 4], 1)
+opt_state = Flux.setup(optimiser, model)
 for ep in 1:100000
-    epochloss = train!(model, loss, optimiser, X', y')
+    epochloss = train!(model, loss, opt_state, X', y')
     if ep % 100 == 0
         @info("Epoch $ep, loss = $epochloss")
     end
