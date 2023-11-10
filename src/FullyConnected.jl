@@ -47,7 +47,7 @@ function FullyConnected(
     # Create the output layer connected to the last hidden layer
     push!(layers, Dense(hidden_sizes[end] + 1, output_size; init=init))
 
-    return FullyConnected(PairwiseFusion(vcat, layers...), pass_through)
+    return FullyConnected(PairwiseFusion(vcat, layers...), pass_through) |> gpu
 end
 
 mutable struct FullyConnectedBuilder <: MLJFlux.Builder
@@ -56,7 +56,7 @@ end
 
 function MLJFlux.build(builder::FullyConnectedBuilder, rng, n_in, n_out)
     init = Flux.glorot_uniform(rng)
-    return Chain(FullyConnected(n_in, builder.hidden_sizes, n_out; init=init))
+    return Chain(FullyConnected(n_in, builder.hidden_sizes, n_out; init=init)) |> gpu
 end
 
 # mutable struct ConvexRegressor <: MLJFlux.MLJFluxDeterministic

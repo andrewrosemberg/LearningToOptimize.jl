@@ -8,6 +8,10 @@ using Gurobi
 using Flux
 using MLJ
 using L2O
+using JuMP
+using CUDA
+
+include("examples/powermodels/powermodels.jl")
 
 matpower_case_name = "pglib_opf_case5_pjm"
 
@@ -27,30 +31,33 @@ vm_fr, vm_to = rand(f_bus["vmin"]:0.0001:f_bus["vmax"]), rand(t_bus["vmin"]:0.00
 va_fr, va_to = rand(branch["angmin"]:0.0001:branch["angmax"], num_samples), rand(branch["angmin"]:0.0001:branch["angmax"], num_samples)
 a_diff = va_fr - va_to
 
-using Plots
+# using Plots
 f_owms_val = f_owms.(vm_fr, vm_to, va_fr, va_to)
-plt = scatter(a_diff, [i[1] for i in f_owms_val], label="p_fr", xlabel="θ_fr - θ_to", ylabel="flow", legend=:outertopright);
-scatter!(plt, a_diff, [i[2] for i in f_owms_val], label="q_fr");
+# plt = scatter(a_diff, [i[1] for i in f_owms_val], label="p_fr", xlabel="θ_fr - θ_to", ylabel="flow", legend=:outertopright);
+# scatter!(plt, a_diff, [i[2] for i in f_owms_val], label="q_fr");
 
 # Define Model
 model = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder([32, 64]),
     rng=123,
-    epochs=1000,
+    epochs=10,
     optimiser=Flux.Optimise.Adam(),
+    # acceleration=CUDALibs(),
 )
 
 # Define the machine
 _vm_fr, _vm_to = rand(f_bus["vmin"]:0.0001:f_bus["vmax"], num_samples), rand(t_bus["vmin"]:0.0001:t_bus["vmax"], num_samples)
 _va_fr, _va_to = rand(branch["angmin"]:0.0001:branch["angmax"], num_samples), rand(branch["angmin"]:0.0001:branch["angmax"], num_samples)
-mach = machine(model, [_vm_fr _vm_to _va_fr _va_to], vcat([[i[1] i[2]] for i in f_owms_val]...))
-fit!(mach; verbosity=2, force=true)
+X = [_vm_fr _vm_to _va_fr _va_to]
+y = [i[1] for i in f_owms_val][:,:]
+mach = machine(model, X, y)
+fit!(mach; verbosity=2)
 
 # Make predictions
 predictions = predict(mach, [fill(vm_fr, num_samples) fill(vm_to, num_samples) va_fr va_to])
 
-scatter!(plt, a_diff, predictions[:,1], label="p_fr_pred");
-scatter!(plt, a_diff, predictions[:,2], label="q_fr_pred")
+# scatter!(plt, a_diff, predictions[:,1], label="p_fr_pred");
+# scatter!(plt, a_diff, predictions[:,2], label="q_fr_pred")
 
 function function_ohms_yt_from(::Dict)
     return (vm_fr, vm_to, va_fr, va_to) -> mach.fitresult[1]([vm_fr, vm_to, va_fr, va_to])

@@ -17,6 +17,7 @@ using Flux
 using Flux: @functor
 using Random
 import MLJFlux.train!
+using Optimisers
 
 export ArrowFile,
     CSVFile,
@@ -39,5 +40,6 @@ include("arrowrecorder.jl")
 include("worst_case.jl")
 include("worst_case_iter.jl")
 include("FullyConnected.jl")
+include("nn_expression.jl")
 
 end
