@@ -53,12 +53,20 @@ X = [_vm_fr _vm_to _va_fr _va_to]
 y = [i[1] for i in f_owms_val][:,:]
 
 loss = Flux.mse
-model = FullyConnected(4, [4, 4], 1)
+model = FullyConnected(4, [3], 1)
 opt_state = Flux.setup(optimiser, model)
+best_model = model
+best_loss = 1000000
 for ep in 1:100000
     epochloss = train!(model, loss, opt_state, X', y')
     if ep % 100 == 0
         @info("Epoch $ep, loss = $epochloss")
+        if epochloss < best_loss
+            best_loss = epochloss
+            best_model = deepcopy(model)
+        else
+            model = deepcopy(best_model)
+        end
     end
 end
 
