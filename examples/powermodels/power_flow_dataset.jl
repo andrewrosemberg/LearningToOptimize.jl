@@ -52,6 +52,15 @@ _va_fr, _va_to = rand(branch["angmin"]:0.0001:branch["angmax"], num_samples), ra
 X = [_vm_fr _vm_to _va_fr _va_to]
 y = [i[1] for i in f_owms_val][:,:]
 
+# mach = machine(model, X, y)
+# fit!(mach; verbosity=2)
+
+# Make predictions
+# predictions = predict(mach, [fill(vm_fr, num_samples) fill(vm_to, num_samples) va_fr va_to])
+
+# scatter!(plt, a_diff, predictions[:,1], label="p_fr_pred");
+# scatter!(plt, a_diff, predictions[:,2], label="q_fr_pred")
+
 loss = Flux.mse
 model = FullyConnected(4, [3], 1)
 opt_state = Flux.setup(optimiser, model)
@@ -70,14 +79,6 @@ for ep in 1:100000
     end
 end
 
-# mach = machine(model, X, y)
-# fit!(mach; verbosity=2)
-
-# Make predictions
-# predictions = predict(mach, [fill(vm_fr, num_samples) fill(vm_to, num_samples) va_fr va_to])
-
-# scatter!(plt, a_diff, predictions[:,1], label="p_fr_pred");
-# scatter!(plt, a_diff, predictions[:,2], label="q_fr_pred")
 
 function function_ohms_yt_from(::Dict)
     return (vm_fr, vm_to, va_fr, va_to) -> mach.fitresult[1]([vm_fr, vm_to, va_fr, va_to])
