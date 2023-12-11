@@ -18,7 +18,7 @@ matpower_case_name = "pglib_opf_case5_pjm"
 
 network_data = make_basic_network(pglib(matpower_case_name))
 
-branch = network_data["branch"]["1"]
+branch = network_data["branch"]["2"]
 f_bus_index = branch["f_bus"]
 f_bus = network_data["bus"]["$f_bus_index"]
 t_bus_index = branch["t_bus"]
@@ -32,10 +32,10 @@ vm_fr, vm_to = rand(f_bus["vmin"]:0.0001:f_bus["vmax"]), rand(t_bus["vmin"]:0.00
 va_fr, va_to = rand(branch["angmin"]:0.0001:branch["angmax"], num_samples), rand(branch["angmin"]:0.0001:branch["angmax"], num_samples)
 a_diff = va_fr - va_to
 
-# using Plots
+using Plots
 f_owms_val = f_owms.(vm_fr, vm_to, va_fr, va_to)
-# plt = scatter(a_diff, [i[1] for i in f_owms_val], label="p_fr", xlabel="θ_fr - θ_to", ylabel="flow", legend=:outertopright);
-# scatter!(plt, a_diff, [i[2] for i in f_owms_val], label="q_fr");
+plt = scatter(a_diff, [i[1] for i in f_owms_val], label="p_fr", xlabel="θ_fr - θ_to", ylabel="flow", legend=:outertopright);
+scatter!(plt, a_diff, [i[2] for i in f_owms_val], label="q_fr")
 optimiser=Flux.Optimise.Adam()
 # Define Model
 # model = MultitargetNeuralNetworkRegressor(;
@@ -62,7 +62,7 @@ y = [i[1] for i in f_owms_val][:,:]
 # scatter!(plt, a_diff, predictions[:,2], label="q_fr_pred")
 
 loss = Flux.mse
-model = FullyConnected(4, [3], 1)
+model = FullyConnected(4, [3], 2)
 opt_state = Flux.setup(optimiser, model)
 best_model = model
 best_loss = 1000000
@@ -81,11 +81,11 @@ end
 
 
 function function_ohms_yt_from(::Dict)
-    return (vm_fr, vm_to, va_fr, va_to) -> mach.fitresult[1]([vm_fr, vm_to, va_fr, va_to])
+    return (vm_fr, vm_to, va_fr, va_to) -> model([vm_fr, vm_to, va_fr, va_to])
 end
 
 function function_ohms_yt_to(branch::Dict)
-    return (vm_fr, vm_to, va_fr, va_to) -> mach.fitresult[1]([vm_fr, vm_to, va_fr, va_to])
+    return (vm_fr, vm_to, va_fr, va_to) -> model([vm_fr, vm_to, va_fr, va_to])
 end
 
 pm = instantiate_model(
