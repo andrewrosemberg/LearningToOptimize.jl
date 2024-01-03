@@ -24,7 +24,7 @@ Arrow = "2"
 CSV = "0.10"
 Dualization = "0.5"
 JuMP = "1"
-ParametricOptInterface = "0.5"
+ParametricOptInterface = "0.7"
 julia = "1.6"
 
 [extras]
