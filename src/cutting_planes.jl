@@ -151,12 +151,22 @@ function add_cut!(upper_model::Model, cut_intercept, cut_slope, cut_point, u)
     )
 end
 
-function solve_or_shuffle!(model::Model, u, cuts_point)
+function solve_or_shuffle!(model::Model, u, cuts_point, iteration)
     JuMP.optimize!(model)
-    new_point = rand([0;1],length(u))
-    if termination_status(model) != MOI.OPTIMAL || isapprox(new_point, cuts_point[end])
+    
+    if termination_status(model) != MOI.OPTIMAL
         return rand([0;1],length(u))
     end
+
+    new_point = round.(Int, value.(u))
+    if iteration > 1000 || iteration < 11
+        return new_point
+    end
+
+    if all(isapprox(new_point, cuts_point[j]) for j in iteration-10:iteration-1)
+        return rand([0;1],length(u))
+    end
+
     return new_point
 end
 
@@ -191,7 +201,7 @@ function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_ite
         add_cut!(upper_model, cuts_intercept[i], cuts_slope[i], cuts_point[i], u)
     
         # Add point to the lists
-        new_point = solve_or_shuffle!(upper_model, u, cuts_point)
+        new_point = solve_or_shuffle!(upper_model, u, cuts_point, i)
         push!(cuts_point, new_point)
         if value(θ) > bound
             bound = value(θ)
@@ -215,7 +225,7 @@ function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_ite
         upper_bound[i] = u_bound
         lower_bound[i] = bound
         gap[i] = abs(bound - u_bound) / u_bound
-        if i > 10 && gap[i] < atol && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
+        if i > 10 && gap[i] < atol # && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
             println("Converged")
             break;
         else

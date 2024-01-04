@@ -201,7 +201,7 @@ import UnitCommitment:
 instance = UnitCommitment.read_benchmark(
     "matpower/case14/2017-01-01",
 )
-# instance.time = 4
+instance.time = 15
 inner_solver = () -> POI.Optimizer(HiGHS.Optimizer())
 upper_solver = HiGHS.Optimizer
 
