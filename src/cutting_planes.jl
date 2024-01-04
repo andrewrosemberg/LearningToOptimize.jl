@@ -138,8 +138,8 @@ function fix_binary_variables!(inner_model::Model, inner_2_upper_map::Dict)
 end
 
 # set binary variables
-function set_binary_variables!(inner_model::Model, var_mapping::Dict, vals)
-    for (i, to_var) in enumerate(values(var_mapping))
+function set_binary_variables!(inner_model::Model, u_inner, vals)
+    for (i, to_var) in enumerate(u_inner)
         MOI.set(inner_model, POI.ParameterValue(), to_var, vals[i])
     end
 end
@@ -151,7 +151,16 @@ function add_cut!(upper_model::Model, cut_intercept, cut_slope, cut_point, u)
     )
 end
 
-function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_iter::Int=1000)
+function solve_or_shuffle!(model::Model, u, cuts_point)
+    JuMP.optimize!(model)
+    new_point = rand([0;1],length(u))
+    if termination_status(model) != MOI.OPTIMAL || isapprox(new_point, cuts_point[end])
+        return rand([0;1],length(u))
+    end
+    return new_point
+end
+
+function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_iter::Int=4000, atol::Real=0.1, bound::Real=0.0)
     upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
     delete_binary_terms!(inner_model)
     add_deficit_constraints!(inner_model)
@@ -165,10 +174,9 @@ function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_ite
     JuMP.optimize!(inner_model)
     cuts_intercept = [objective_value(inner_model)]
     cuts_slope = [[MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner]]
-    cuts_point = [zeros(length(upper_2_inner))]
+    cuts_point = [rand([0;1],length(upper_2_inner))]
 
     # cutting planes epigraph variable
-    bound = -1e7
     @variable(upper_model, θ >= bound)
     obj_upper = objective_function(upper_model)
     @objective(upper_model, Min, obj_upper + θ)
@@ -182,19 +190,15 @@ function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_ite
         # Add cuts
         add_cut!(upper_model, cuts_intercept[i], cuts_slope[i], cuts_point[i], u)
     
-        JuMP.optimize!(upper_model)
-    
         # Add point to the lists
-        if termination_status(upper_model) == MOI.OPTIMAL
-            push!(cuts_point, value.(keys(upper_2_inner)))
-            bound = objective_value(upper_model)
-        else
-            println("Upper problem failed")
-            break;
+        new_point = solve_or_shuffle!(upper_model, u, cuts_point)
+        push!(cuts_point, new_point)
+        if value(θ) > bound
+            bound = value(θ)
         end
     
         # run inner problem
-        set_binary_variables!(inner_model, upper_2_inner, cuts_point[i+1])
+        set_binary_variables!(inner_model, u_inner, cuts_point[i+1])
         JuMP.optimize!(inner_model)
     
         # Add cut to the lists
@@ -207,11 +211,11 @@ function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_ite
         end
     
         # test convergence
-        u_bound = minimum(cuts_intercept)
+        u_bound = cuts_intercept[i+1]
         upper_bound[i] = u_bound
         lower_bound[i] = bound
         gap[i] = abs(bound - u_bound) / u_bound
-        if i > 10 && gap[i] < 0.1 && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
+        if i > 10 && gap[i] < atol && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
             println("Converged")
             break;
         else
