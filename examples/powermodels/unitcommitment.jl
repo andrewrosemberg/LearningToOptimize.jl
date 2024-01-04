@@ -94,72 +94,72 @@ primal_status(inner_model)
 obj_value = objective_value(inner_model)
 duals = [MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner]
 
-# cut list
-cuts_intercept = [obj_value]
-cuts_slope = [duals]
-cuts_point = [start_values]
+# # cut list
+# cuts_intercept = [obj_value]
+# cuts_slope = [duals]
+# cuts_point = [start_values]
 
-gurobi_optimizer = optimizer_with_attributes(Gurobi.Optimizer, "OutputFlag" => 0)
-upper_model = Model(gurobi_optimizer)
-# Create commit variables
-@variable(upper_model, u[i in 1:length(network_data["gen"])] , Bin)
+# gurobi_optimizer = optimizer_with_attributes(Gurobi.Optimizer, "OutputFlag" => 0)
+# upper_model = Model(gurobi_optimizer)
+# # Create commit variables
+# @variable(upper_model, u[i in 1:length(network_data["gen"])] , Bin)
 
-# cutting planes epigraph variable
-bound = -1e7
-@variable(upper_model, θ >= bound)
+# # cutting planes epigraph variable
+# bound = -1e7
+# @variable(upper_model, θ >= bound)
 
-# minimize the epigraph variable
-@objective(upper_model, Min, θ)
+# # minimize the epigraph variable
+# @objective(upper_model, Min, θ)
 
-max_iter = 1000
-i = 1
-gap = Array{Float64}(undef, max_iter)
-upper_bound = Array{Float64}(undef, max_iter)
-lower_bound = Array{Float64}(undef, max_iter)
-while i <= max_iter
-    # Add cuts
-    @constraint(upper_model, 
-        θ >= cuts_intercept[i] + dot(cuts_slope[i], u .- cuts_point[i])
-    )
+# max_iter = 1000
+# i = 1
+# gap = Array{Float64}(undef, max_iter)
+# upper_bound = Array{Float64}(undef, max_iter)
+# lower_bound = Array{Float64}(undef, max_iter)
+# while i <= max_iter
+#     # Add cuts
+#     @constraint(upper_model, 
+#         θ >= cuts_intercept[i] + dot(cuts_slope[i], u .- cuts_point[i])
+#     )
 
-    JuMP.optimize!(upper_model)
+#     JuMP.optimize!(upper_model)
 
-    # Add point to the lists
-    if termination_status(upper_model) == MOI.OPTIMAL
-        push!(cuts_point, value.(u))
-        bound = objective_value(upper_model)
-    else
-        println("Upper problem failed")
-        break;
-    end
+#     # Add point to the lists
+#     if termination_status(upper_model) == MOI.OPTIMAL
+#         push!(cuts_point, value.(u))
+#         bound = objective_value(upper_model)
+#     else
+#         println("Upper problem failed")
+#         break;
+#     end
 
-    # run inner problem
-    MOI.set.(inner_model, POI.ParameterValue(), u_inner, cuts_point[i+1])
-    JuMP.optimize!(inner_model)
+#     # run inner problem
+#     MOI.set.(inner_model, POI.ParameterValue(), u_inner, cuts_point[i+1])
+#     JuMP.optimize!(inner_model)
 
-    # Add cut to the lists
-    if termination_status(inner_model) == MOI.OPTIMAL || termination_status(inner_model) == MOI.LOCALLY_SOLVED
-        push!(cuts_intercept, objective_value(inner_model))
-        push!(cuts_slope, [MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner])
-    else
-        println("Inner problem failed")
-        break;
-    end
+#     # Add cut to the lists
+#     if termination_status(inner_model) == MOI.OPTIMAL || termination_status(inner_model) == MOI.LOCALLY_SOLVED
+#         push!(cuts_intercept, objective_value(inner_model))
+#         push!(cuts_slope, [MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner])
+#     else
+#         println("Inner problem failed")
+#         break;
+#     end
 
-    # test convergence
-    u_bound = minimum(cuts_intercept)
-    upper_bound[i] = u_bound
-    lower_bound[i] = bound
-    gap[i] = abs(bound - u_bound) / u_bound
-    if i > 10 && gap[i] < 0.1 && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
-        println("Converged")
-        break;
-    else
-        @info "Iteration $i" bound cuts_intercept[i]
-    end
-    i += 1
-end
-i = ifelse(i >= max_iter, max_iter, i)
+#     # test convergence
+#     u_bound = minimum(cuts_intercept)
+#     upper_bound[i] = u_bound
+#     lower_bound[i] = bound
+#     gap[i] = abs(bound - u_bound) / u_bound
+#     if i > 10 && gap[i] < 0.1 && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
+#         println("Converged")
+#         break;
+#     else
+#         @info "Iteration $i" bound cuts_intercept[i]
+#     end
+#     i += 1
+# end
+# i = ifelse(i >= max_iter, max_iter, i)
 
 gap = gap[1:i]
 upper_bound = upper_bound[1:i]
@@ -174,9 +174,22 @@ plot!(plt, 2:i, lower_bound[2:i], label="Lower bound")
 
 ###########
 
+# function add_deficit!(model; penalty=1e7)
+#     @variable(model, deficit[1:length(model[:eq_power_balance])])
+#     @variable(model, norm_deficit)
+#     for (i, eq) in model[:eq_power_balance]
+#         set_normalized_coefficient(eq, deficit[i], 1)
+#     end
+#     @constraint(model, [norm_deficit; deficit] in MOI.NormOneCone(1 + length(deficit)))
+#     set_objective_coefficient(model, norm_deficit, penalty)
+#     return norm_deficit
+# end
+
 using HiGHS
 using JuMP
 using UnitCommitment
+import ParametricOptInterface as POI
+using LinearAlgebra
 
 import UnitCommitment:
     Formulation,
@@ -189,20 +202,16 @@ instance = UnitCommitment.read_benchmark(
     "matpower/case118/2017-02-01",
 )
 
+inner_solver = () -> POI.Optimizer(HiGHS.Optimizer())
+upper_solver = HiGHS.Optimizer
 
 # Construct model (using state-of-the-art defaults)
 model = UnitCommitment.build_model(
     instance = instance,
-    optimizer = HiGHS.Optimizer,
+    optimizer = inner_solver,
 )
 
-binary_model, var_mapping, cons_mapping = copy_binary_model(model)
-delete_binary_terms!(model)
+# Solve model using cutting plane algorithm
+include("src/cutting_planes.jl")
 
-for var in values(var_mapping)
-    JuMP.fix(
-        var,
-        1.0,
-        force=true,
-    )
-end
+upper_model, lower_bound, upper_bound, gap = cutting_planes!(model; upper_solver, inner_solver)
