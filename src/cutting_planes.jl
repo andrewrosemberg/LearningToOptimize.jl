@@ -1,11 +1,11 @@
 using JuMP
 
 """
-    all_binary_variables(m::Model)
+    all_binary_variables(m::JuMP.Model)
 
 Return a list of all binary variables in the model `m`.
 """
-function all_binary_variables(m::Model)
+function all_binary_variables(m::JuMP.Model)
     return all_variables(m)[is_binary.(all_variables(m))]
 end
 
@@ -19,12 +19,12 @@ function variables(con::ConstraintRef)
 end
 
 """
-    all_binary_constraints(m::Model)
+    all_binary_constraints(m::JuMP.Model)
 
 Return a list of all constraints in the model `m` 
 containing only binary variables.
 """
-function all_binary_constraints(m::Model)
+function all_binary_constraints(m::JuMP.Model)
     all_cons_types = list_of_constraint_types(m)
     consrefs = []
     for con_type in all_cons_types
@@ -39,20 +39,20 @@ function all_binary_constraints(m::Model)
 end
 
 # Copy variables
-function copy_binary_variables(m_to::Model, m_from::Model)
+function copy_binary_variables(m_to::JuMP.Model, m_from::JuMP.Model)
     mapping = Dict()
     for var in all_binary_variables(m_from)
-        ref_to = @variable(m_to, base_name = name(var), binary = true)
+        ref_to = @variable(m_to, base_name = JuMP.name(var), binary = true)
         mapping[var] = ref_to
     end
     return mapping
 end
 
 # Copy constraints
-function copy_binary_constraint(::Model, ::VariableRef, set, var_mapping)
+function copy_binary_constraint(::JuMP.Model, ::VariableRef, set, var_mapping)
     return nothing
 end
-function copy_binary_constraint(m_to::Model, func::AffExpr, set, var_mapping)
+function copy_binary_constraint(m_to::JuMP.Model, func::AffExpr, set, var_mapping)
     terms_dict = JuMP.OrderedCollections.OrderedDict{VariableRef, Float64}()
     for var in keys(func.terms)
         terms_dict[var_mapping[var]] = func.terms[var]
@@ -61,7 +61,7 @@ function copy_binary_constraint(m_to::Model, func::AffExpr, set, var_mapping)
     return @constraint(m_to, exp in set)
 end
 
-function copy_binary_constraints(m_to::Model, m_from::Model, var_mapping::Dict)
+function copy_binary_constraints(m_to::JuMP.Model, m_from::JuMP.Model, var_mapping::Dict)
     cons_to = []
     for con in all_binary_constraints(m_from)
         con_exp = constraint_object(con)
@@ -72,7 +72,7 @@ function copy_binary_constraints(m_to::Model, m_from::Model, var_mapping::Dict)
 end
 
 # Copy objective function
-function copy_binary_objective(m_to::Model, m_from::Model, var_mapping::Dict)
+function copy_binary_objective(m_to::JuMP.Model, m_from::JuMP.Model, var_mapping::Dict)
     obj = objective_function(m_from)
     obj2_dict = JuMP.OrderedCollections.OrderedDict{VariableRef, Float64}()
     for var in keys(obj.terms)
@@ -85,8 +85,8 @@ function copy_binary_objective(m_to::Model, m_from::Model, var_mapping::Dict)
 end
 
 # Copy binary model
-function copy_binary_model(m_from::Model)
-    m_to = Model()
+function copy_binary_model(m_from::JuMP.Model)
+    m_to = JuMP.Model()
     var_mapping = copy_binary_variables(m_to, m_from)
     cons_mapping = copy_binary_constraints(m_to, m_from, var_mapping)
     copy_binary_objective(m_to, m_from, var_mapping)
@@ -94,7 +94,7 @@ function copy_binary_model(m_from::Model)
 end
 
 # remove binary terms
-function delete_binary_terms!(m::Model)
+function delete_binary_terms!(m::JuMP.Model)
     obj = objective_function(m)
     for var in keys(obj.terms)
         if is_binary(var)
@@ -111,7 +111,7 @@ function delete_binary_terms!(m::Model)
     end
 end
 
-function add_deficit_constraints!(model::Model; penalty=1e7)
+function add_deficit_constraints!(model::JuMP.Model; penalty=1e7)
     consrefs = [con for con in all_constraints(model, include_variable_in_set_constraints=false)]
     @variable(model, deficit[1:length(consrefs)])
     @variable(model, norm_deficit)
@@ -124,7 +124,7 @@ function add_deficit_constraints!(model::Model; penalty=1e7)
 end
 
 # fix binary variables to POI parameters
-function fix_binary_variables!(inner_model::Model, inner_2_upper_map::Dict)
+function fix_binary_variables!(inner_model::JuMP.Model, inner_2_upper_map::Dict)
     var_mapping = Dict()
     for (to_var, from_var) in inner_2_upper_map
         param = @variable(inner_model, set = MOI.Parameter(0.0))
@@ -138,20 +138,20 @@ function fix_binary_variables!(inner_model::Model, inner_2_upper_map::Dict)
 end
 
 # set binary variables
-function set_binary_variables!(inner_model::Model, u_inner, vals)
+function set_binary_variables!(inner_model::JuMP.Model, u_inner, vals)
     for (i, to_var) in enumerate(u_inner)
         MOI.set(inner_model, POI.ParameterValue(), to_var, vals[i])
     end
 end
 
 # add cut
-function add_cut!(upper_model::Model, cut_intercept, cut_slope, cut_point, u)
+function add_cut!(upper_model::JuMP.Model, cut_intercept, cut_slope, cut_point, u)
     @constraint(upper_model, 
         upper_model[:θ] >= cut_intercept + dot(cut_slope, u .- cut_point)
     )
 end
 
-function solve_or_shuffle!(model::Model, u, cuts_point, iteration)
+function solve_or_shuffle!(model::JuMP.Model, u, cuts_point, iteration)
     JuMP.optimize!(model)
     
     if termination_status(model) != MOI.OPTIMAL
@@ -170,7 +170,7 @@ function solve_or_shuffle!(model::Model, u, cuts_point, iteration)
     return new_point
 end
 
-function cutting_planes!(inner_model::Model; upper_solver, inner_solver, max_iter::Int=4000, atol::Real=0.1, bound::Real=0.0)
+function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, max_iter::Int=4000, atol::Real=0.1, bound::Real=0.0)
     upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
     delete_binary_terms!(inner_model)
     add_deficit_constraints!(inner_model)

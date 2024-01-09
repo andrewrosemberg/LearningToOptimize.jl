@@ -2,7 +2,7 @@ using JuMP
 
 import NNlib: relu
 
-big_M = 1000.0
+big_M = 1e10
 
 function NNlib.relu(ex::AffExpr)
     model = owner_model(ex)

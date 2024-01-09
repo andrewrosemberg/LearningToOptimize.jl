@@ -27,8 +27,11 @@ include(joinpath(examples_dir, "powermodels", "pglib_datagen.jl"))
 
 include(joinpath(test_dir, "test_flux_forecaster.jl"))
 
+include(joinpath(test_dir, "nn_expression.jl"))
+
 @testset "L2O.jl" begin
     mktempdir() do path
+        test_flux_jump()
         test_problem_iterator(path)
         test_worst_case_problem_iterator(path)
         file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
