@@ -45,9 +45,9 @@ function my_callback_function(cb_data, cb_where::Cint)
         # resultP = Vector{Cdouble}(undef, num_all_var)
         # GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_REL, resultP)
         # push!(my_storage_vars, resultP)
-        return
+        # return
     end
-    if cb_where == GRB_CB_MIPSOL || cb_where == GRB_CB_MIPNODE
+    if cb_where == GRB_CB_MIPSOL
         # Before querying `callback_value`, you must call:
         Gurobi.load_callback_variable_primal(cb_data, cb_where)
         # Get the values of the variables
@@ -144,3 +144,10 @@ aux = @variable(upper_model)
 
 set_optimizer(upper_model, upper_solver)
 JuMP.optimize!(upper_model)
+
+termination_status(upper_model)
+value.(bin_vars_upper)
+objective_value(upper_model)
+
+mach.fitresult.fitresult[1](value.(bin_vars_upper))
+(value(obj[1]) - true_ob_value) / true_ob_value

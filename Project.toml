@@ -25,6 +25,7 @@ CSV = "0.10"
 Dualization = "0.5"
 JuMP = "1"
 ParametricOptInterface = "0.7"
+Zygote ="^0.6.68"
 julia = "1.6"
 
 [extras]
