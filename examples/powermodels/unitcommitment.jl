@@ -1,3 +1,11 @@
+###################################################
+############## Unit Commitment Model ##############
+###################################################
+
+##############
+# Load Packages
+##############
+
 using LinearAlgebra
 using MLJFlux
 using Gurobi
@@ -18,28 +26,44 @@ import UnitCommitment:
     MorLatRam2013,
     ShiftFactorsFormulation
 
-# Read benchmark instance
+include("src/cutting_planes.jl")
+
+##############
+# Solver
+##############
+
+inner_solver = () -> POI.Optimizer(Gurobi.Optimizer())
+upper_solver = Gurobi.Optimizer
+
+##############
+# Load Instance
+##############
+
 instance = UnitCommitment.read_benchmark(
     "matpower/case300/2017-01-01",
 )
 instance.time = 2
-inner_solver = () -> POI.Optimizer(Gurobi.Optimizer())
-upper_solver = Gurobi.Optimizer
 
 # Construct model (using state-of-the-art defaults)
 model = UnitCommitment.build_model(
     instance = instance,
     optimizer = upper_solver,
 )
+
+# Set solver attributes
 set_optimizer_attribute(model, "PoolSearchMode", 2)
 set_optimizer_attribute(model, "PoolSolutions", 100)
 
-bin_vars = [val for val in values(model[:is_on])]
+##############
+# Solve and store solutions
+##############
+
+bin_vars = all_binary_variables(model)
 obj_terms = objective_function(model).terms
 obj_terms_gurobi = [obj_terms[var] for var in all_variables(model) if haskey(obj_terms, var)]
-# gurobi_indexes = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[bin_vars[i].index]) for i in 1:length(bin_vars)]
 num_bin_var = length(bin_vars)
 num_all_var = num_variables(model)
+
 global my_storage_vars = []
 global my_storage_obj = []
 global is_relaxed = []
@@ -92,18 +116,23 @@ true_ob_value = objective_value(model)
 true_sol = value.(bin_vars)
 
 # Solve model using cutting plane algorithm
-include("src/cutting_planes.jl")
-
 # upper_model, lower_bound, upper_bound, gap = cutting_planes!(model; upper_solver, inner_solver)
 
-optimiser=Flux.Optimise.Adam()
+##############
+# Fit DNN approximator
+##############
+
+# optimiser=Flux.Optimise.Adam()
+optimiser=ConvexRule(
+    Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+)
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder([64, 32]),
+    builder=FullyConnectedBuilder([1024, 300, 64, 32]), # [1024, 300, 64, 32]
     rng=123,
     epochs=100,
     optimiser=optimiser,
     acceleration=CUDALibs(),
-    batch_size=32,
+    batch_size=24,
 )
 
 # Define the machine
@@ -119,7 +148,10 @@ clear() = begin
     return nothing
 end
 
-update_loss(loss) = push!(losses, loss)
+function update_loss(loss)
+    @info "Loss: $loss"
+    push!(losses, loss)
+end
 update_training_loss(report) =
     push!(training_losses,
           report.training_losses[end])
@@ -137,8 +169,8 @@ controls=[Step(1),
 iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
-        resampling=Holdout(fraction_train=0.8),
-        measure = Flux.mse
+        resampling=Holdout(fraction_train=0.7),
+        measure = Flux.mse,
 )
 
 clear()
@@ -150,11 +182,22 @@ predictions = convert.(Float64, predict(mach, X))
 error = abs.(y .- predictions) ./ y
 mean(error)
 
+##############
+# Solve using DNN approximator
+##############
+
+function NNlib.relu(ex::AffExpr)
+    model = owner_model(ex)
+    relu_out = @variable(model, lower_bound = 0.0)
+    @constraint(model, relu_out >= ex)
+    return relu_out
+end
+
 # Get upper model
 upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(model)
 
 # add nn to model
-bin_vars_upper = [inner_2_upper_map[var] for var in values(model[:is_on])]
+bin_vars_upper = [inner_2_upper_map[var] for var in bin_vars]
 obj = mach.fitresult.fitresult[1](bin_vars_upper)
 
 aux = @variable(upper_model)
@@ -166,8 +209,20 @@ set_optimizer(upper_model, upper_solver)
 JuMP.optimize!(upper_model)
 
 termination_status(upper_model)
-value.(bin_vars_upper)
+sol_bin_vars = round.(Int, value.(bin_vars_upper))
 objective_value(upper_model)
 
-mach.fitresult.fitresult[1](value.(bin_vars_upper))
+##############
+# Compare
+##############
+# Compare using approximator
+mach.fitresult.fitresult[1](sol_bin_vars .* 1.0)
 abs(value(obj[1]) - true_ob_value) / true_ob_value
+
+# Compare using foward pass
+for i in 1:length(bin_vars_upper)
+    fix(bin_vars[i], sol_bin_vars[i])
+end
+
+JuMP.optimize!(model)
+abs(objective_value(model) - true_ob_value) / true_ob_value
