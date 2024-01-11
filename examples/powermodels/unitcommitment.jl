@@ -22,7 +22,7 @@ import UnitCommitment:
 instance = UnitCommitment.read_benchmark(
     "matpower/case300/2017-01-01",
 )
-instance.time = 15
+instance.time = 2
 inner_solver = () -> POI.Optimizer(Gurobi.Optimizer())
 upper_solver = Gurobi.Optimizer
 
@@ -35,17 +35,34 @@ set_optimizer_attribute(model, "PoolSearchMode", 2)
 set_optimizer_attribute(model, "PoolSolutions", 100)
 
 bin_vars = [val for val in values(model[:is_on])]
+obj_terms = objective_function(model).terms
+obj_terms_gurobi = [obj_terms[var] for var in all_variables(model) if haskey(obj_terms, var)]
+# gurobi_indexes = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[bin_vars[i].index]) for i in 1:length(bin_vars)]
 num_bin_var = length(bin_vars)
 num_all_var = num_variables(model)
 global my_storage_vars = []
 global my_storage_obj = []
+global is_relaxed = []
+global non_optimals = []
 function my_callback_function(cb_data, cb_where::Cint)
     # You can select where the callback is run
     if cb_where == GRB_CB_MIPNODE
-        # resultP = Vector{Cdouble}(undef, num_all_var)
-        # GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_REL, resultP)
-        # push!(my_storage_vars, resultP)
-        # return
+        resultobj = Ref{Cint}()
+        GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_STATUS, resultobj)
+        if resultobj[] != GRB_OPTIMAL
+            push!(non_optimals, resultobj[])
+            return  # Solution is something other than optimal.
+        end
+        gurobi_indexes_all = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[var.index]) for var in all_variables(model) if haskey(obj_terms, var)]
+        gurobi_indexes_bin = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[bin_vars[i].index]) for i in 1:length(bin_vars)]
+        resultP = Vector{Cdouble}(undef, num_all_var)
+        GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_REL, resultP)
+        push!(my_storage_vars, resultP[gurobi_indexes_bin])
+        # Get the objective value
+        push!(my_storage_obj, dot(obj_terms_gurobi, resultP[gurobi_indexes_all]))
+        # mark as relaxed
+        push!(is_relaxed, 1)
+        return
     end
     if cb_where == GRB_CB_MIPSOL
         # Before querying `callback_value`, you must call:
@@ -59,6 +76,8 @@ function my_callback_function(cb_data, cb_where::Cint)
         GRBcbget(cb_data, cb_where, GRB_CB_MIPSOL_OBJ, obj)
         # push
         push!(my_storage_obj, obj[])
+        # mark as not relaxed
+        push!(is_relaxed, 0)
         return
     end
     return
@@ -67,6 +86,7 @@ MOI.set(model, Gurobi.CallbackFunction(), my_callback_function)
 
 # JuMP.optimize!(model)
 UnitCommitment.optimize!(model)
+is_relaxed = findall(x -> x == 1, is_relaxed)
 
 true_ob_value = objective_value(model)
 true_sol = value.(bin_vars)
@@ -78,7 +98,7 @@ include("src/cutting_planes.jl")
 
 optimiser=Flux.Optimise.Adam()
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder([8, 8, 8]),
+    builder=FullyConnectedBuilder([64, 32]),
     rng=123,
     epochs=100,
     optimiser=optimiser,
@@ -108,7 +128,7 @@ update_epochs(epoch) = push!(epochs, epoch)
 controls=[Step(1),
     NumberSinceBest(6),
     InvalidValue(),
-    TimeLimit(1/60),
+    TimeLimit(5/60),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
@@ -118,7 +138,7 @@ iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
         resampling=Holdout(fraction_train=0.8),
-        measure = l2
+        measure = Flux.mse
 )
 
 clear()
@@ -150,4 +170,4 @@ value.(bin_vars_upper)
 objective_value(upper_model)
 
 mach.fitresult.fitresult[1](value.(bin_vars_upper))
-(value(obj[1]) - true_ob_value) / true_ob_value
+abs(value(obj[1]) - true_ob_value) / true_ob_value
