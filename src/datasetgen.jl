@@ -32,6 +32,7 @@ end
 Recorder of optimization problem solutions.
 """
 mutable struct Recorder{T<:FileType}
+    model::JuMP.Model
     recorder_file::RecorderFile{T}
     recorder_file_input::RecorderFile{T}
     primal_variables::Vector
@@ -44,6 +45,13 @@ mutable struct Recorder{T<:FileType}
         primal_variables=[],
         dual_variables=[],
         filterfn=filter_fn,
+        model= if length(primal_variables) > 0
+            owner_model(primal_variables[1])
+        elseif length(dual_variables) > 0
+            owner_model(dual_variables[1])
+        else
+            @error("No model provided")
+        end,
     ) where {T<:FileType}
         return new{T}(
             RecorderFile{T}(filename),
@@ -121,9 +129,7 @@ function save(
 ) where {T<:FileType}
     kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
     df = (; id=problem_iterator.ids,)
-    for ky in kys
-        df = merge(df, (; Symbol(ky) => problem_iterator.pairs[ky]))
-    end
+    df = merge(df, (; zip(Symbol.(kys), [problem_iterator.pairs[ky] for ky in kys])...))
     save(df, filename, file_type)
     return nothing
 end

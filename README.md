@@ -35,7 +35,7 @@ problem_iterator = ProblemIterator(parameter_values)
 The parameter values of the problem iterator can be saved by simply:
 
 ```julia
-save(problem_iterator, "input_file.csv", CSVFile)
+save(problem_iterator, "input_file", CSVFile)
 ```
 
 Which creates the following CSV:
@@ -64,7 +64,7 @@ Then chose what values to record:
 recorder = Recorder{CSVFile}("output_file.csv", primal_variables=[x], dual_variables=[cons])
 
 # Finally solve all problems described by the iterator
-solve_batch(model, problem_iterator, recorder)
+solve_batch(problem_iterator, recorder)
 ```
 
 Which creates the following CSV:

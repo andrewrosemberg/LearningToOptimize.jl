@@ -28,6 +28,8 @@ import UnitCommitment:
 
 include("src/cutting_planes.jl")
 
+data_dir = joinpath(pwd(), "examples/unitcommitment", "data") # joinpath(dirname(@__FILE__), "data")
+
 ##############
 # Solver
 ##############
@@ -38,11 +40,14 @@ upper_solver = Gurobi.Optimizer
 ##############
 # Load Instance
 ##############
-
+case_name = "case300"
+date = "2017-01-01"
+horizon = 2
+save_name = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
 instance = UnitCommitment.read_benchmark(
-    "matpower/case300/2017-01-01",
+    joinpath("matpower", case_name, date),
 )
-instance.time = 2
+instance.time = horizon
 
 # Construct model (using state-of-the-art defaults)
 model = UnitCommitment.build_model(
@@ -123,6 +128,7 @@ true_sol = value.(bin_vars)
 ##############
 # Get upper model
 inner_model = model
+MOI.set(inner_model, Gurobi.CallbackFunction(), nothing)
 upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
 # delete binary constraints from inner model
 delete_binary_terms!(inner_model; delete_objective=false)
@@ -138,7 +144,13 @@ parameter_values = Dict(u_inner .=> [rand([0;1],num_s) for i in 1:length(u_inner
 
 # The iterator
 problem_iterator = ProblemIterator(parameter_values)
+save(problem_iterator, joinpath(data_dir, "input_" * save_name), CSVFile)
 
+# CSV recorder to save the optimal primal and dual decision values
+recorder = Recorder{CSVFile}(joinpath(data_dir, "output_" * save_name); model=inner_model)
+
+# Finally solve all problems described by the iterator
+solve_batch(problem_iterator, recorder)
 
 ##############
 # Fit DNN approximator
