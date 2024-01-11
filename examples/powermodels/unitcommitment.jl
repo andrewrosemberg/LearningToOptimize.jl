@@ -119,6 +119,28 @@ true_sol = value.(bin_vars)
 # upper_model, lower_bound, upper_bound, gap = cutting_planes!(model; upper_solver, inner_solver)
 
 ##############
+# Enhance dataset
+##############
+# Get upper model
+inner_model = model
+upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
+# delete binary constraints from inner model
+delete_binary_terms!(inner_model; delete_objective=false)
+# add deficit constraints
+add_deficit_constraints!(inner_model)
+# link binary variables from upper to inner model
+upper_2_inner = fix_binary_variables!(inner_model, inner_2_upper_map)
+u_inner = values(upper_2_inner)
+set_optimizer(inner_model, inner_solver)
+# Parameter values
+num_s = 100
+parameter_values = Dict(u_inner .=> [rand([0;1],num_s) for i in 1:length(u_inner)])
+
+# The iterator
+problem_iterator = ProblemIterator(parameter_values)
+
+
+##############
 # Fit DNN approximator
 ##############
 
@@ -166,6 +188,12 @@ controls=[Step(1),
     WithIterationsDo(update_epochs)
 ]
 
+function SobolevLoss_mse(x, y)
+    o_term = Flux.mse(x, y[:, 1])
+    d_term = Flux.mse(gradient( ( _x ) -> sum(layer( _x )), x), y[:, 2:end])
+    return o_term + d_term * 0.1
+end
+
 iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
@@ -181,6 +209,11 @@ fit!(mach; verbosity=2)
 predictions = convert.(Float64, predict(mach, X))
 error = abs.(y .- predictions) ./ y
 mean(error)
+
+# Derivatives
+layer = mach.fitresult.fitresult[1]
+gradient( ( _x ) -> sum(layer( _x )), X')
+
 
 ##############
 # Solve using DNN approximator

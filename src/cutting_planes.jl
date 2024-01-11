@@ -94,21 +94,25 @@ function copy_binary_model(m_from::JuMP.Model)
 end
 
 # remove binary terms
-function delete_binary_terms!(m::JuMP.Model)
-    obj = objective_function(m)
-    for var in keys(obj.terms)
-        if is_binary(var)
-            println("deleting $var")
-            delete!(obj.terms, var)
+function delete_binary_terms!(m::JuMP.Model; delete_objective=true)
+    if delete_objective
+        obj = objective_function(m)
+        for var in keys(obj.terms)
+            if is_binary(var)
+                println("deleting $var")
+                delete!(obj.terms, var)
+            end
         end
+        obj.constant = 0.0
+        set_objective_function(m, obj)
     end
-    obj.constant = 0.0
-    set_objective_function(m, obj)
 
     # remove binary constraints from the original model
     for con in all_binary_constraints(m)
         delete(m, con)
     end
+    
+    return
 end
 
 function add_deficit_constraints!(model::JuMP.Model; penalty=1e7)
