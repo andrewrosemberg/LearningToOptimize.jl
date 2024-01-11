@@ -54,6 +54,7 @@ mutable struct Recorder{T<:FileType}
         end,
     ) where {T<:FileType}
         return new{T}(
+            model,
             RecorderFile{T}(filename),
             RecorderFile{T}(filename_input),
             primal_variables,
