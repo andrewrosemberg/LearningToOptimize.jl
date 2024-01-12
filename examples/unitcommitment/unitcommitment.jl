@@ -15,12 +15,12 @@ using L2O
 using JuMP
 using CUDA
 using Logging
-using HiGHS, Gurobi
 using JuMP
 using UnitCommitment
 import ParametricOptInterface as POI
 using DataFrames
 using CSV
+using UUIDs
 
 import UnitCommitment:
     Formulation,
@@ -141,6 +141,27 @@ MOI.set(model, Gurobi.CallbackFunction(), my_callback_function)
 UnitCommitment.optimize!(model)
 is_relaxed = findall(x -> x == 1, is_relaxed)
 
+# Data
+X = hcat(my_storage_vars...)'[:,:]
+y = convert.(Float64, my_storage_obj[:,:])
+
+batch_id = uuid1()
+
+# Save solutions
+instances_ids = [uuid1() for i in 1:length(my_storage_vars)]
+df_in = DataFrame(Dict(Symbol.(bin_vars_names) .=> eachcol(X)))
+df_in.id = instances_ids
+df_out = DataFrame(Dict(:objective => y[:,1]))
+df_out.id = instances_ids
+# time,status,primal_status,dual_status
+df_out.time = fill(0.0, length(instances_ids))
+df_out.status = fill("OPTIMAL", length(instances_ids))
+df_out.primal_status = fill("FEASIBLE_POINT", length(instances_ids))
+df_out.dual_status = fill("FEASIBLE_POINT", length(instances_ids))
+
+CSV.write(joinpath(data_dir, save_file * "_input_" * string(batch_id) * ".csv"), df_in)
+CSV.write(joinpath(data_dir, save_file * "_output_" * string(batch_id) * ".csv"), df_out)
+
 true_ob_value = objective_value(model)
 true_sol = value.(bin_vars)
 
@@ -209,10 +230,6 @@ nn = MultitargetNeuralNetworkRegressor(;
     acceleration=CUDALibs(),
     batch_size=24,
 )
-
-# Data
-X = hcat(my_storage_vars...)'[:,:]
-y = convert.(Float64, my_storage_obj[:,:])
 
 X = vcat(X, Matrix(input_features))
 y = vcat(y, output_variables)
