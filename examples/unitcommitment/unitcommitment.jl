@@ -19,6 +19,8 @@ using HiGHS, Gurobi
 using JuMP
 using UnitCommitment
 import ParametricOptInterface as POI
+using DataFrames
+using CSV
 
 import UnitCommitment:
     Formulation,
@@ -43,7 +45,7 @@ upper_solver = Gurobi.Optimizer
 case_name = "case300"
 date = "2017-01-01"
 horizon = 2
-save_name = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
+save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
 instance = UnitCommitment.read_benchmark(
     joinpath("matpower", case_name, date),
 )
@@ -57,13 +59,35 @@ model = UnitCommitment.build_model(
 
 # Set solver attributes
 set_optimizer_attribute(model, "PoolSearchMode", 2)
-set_optimizer_attribute(model, "PoolSolutions", 100)
+set_optimizer_attribute(model, "PoolSolutions", 300)
 
 ##############
 # Solve and store solutions
 ##############
 
-bin_vars = all_binary_variables(model)
+bin_vars = vcat(
+    collect(values(model[:is_on])), 
+    collect(values(model[:startup])), 
+    collect(values(model[:switch_on])),
+    collect(values(model[:switch_off]))
+)
+function tuple_2_name(smb)
+    str = string(smb[1])
+    for i in 2:length(smb)
+        str = str * "_" * string(smb[i])
+    end
+    return str
+end
+bin_vars_names = vcat(
+    "is_on_" .* tuple_2_name.(collect(keys(model[:is_on]))), 
+    "startup_" .* tuple_2_name.(collect(keys(model[:startup]))), 
+    "switch_on_" .* tuple_2_name.(collect(keys(model[:switch_on]))),
+    "switch_off_" .* tuple_2_name.(collect(keys(model[:switch_off])))
+)
+
+@assert all([is_binary(var) for var in bin_vars])
+@assert length(bin_vars) == length(all_binary_variables(model))
+
 obj_terms = objective_function(model).terms
 obj_terms_gurobi = [obj_terms[var] for var in all_variables(model) if haskey(obj_terms, var)]
 num_bin_var = length(bin_vars)
@@ -130,27 +154,44 @@ true_sol = value.(bin_vars)
 inner_model = model
 MOI.set(inner_model, Gurobi.CallbackFunction(), nothing)
 upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
+
 # delete binary constraints from inner model
 delete_binary_terms!(inner_model; delete_objective=false)
 # add deficit constraints
 add_deficit_constraints!(inner_model)
 # link binary variables from upper to inner model
 upper_2_inner = fix_binary_variables!(inner_model, inner_2_upper_map)
-u_inner = values(upper_2_inner)
+# get parameters from inner model in the right order
+u_inner = [upper_2_inner[inner_2_upper_map[var]] for var in bin_vars]
+# set names
+set_name.(u_inner, bin_vars_names)
+# set solver
 set_optimizer(inner_model, inner_solver)
 # Parameter values
-num_s = 100
-parameter_values = Dict(u_inner .=> [rand([0;1],num_s) for i in 1:length(u_inner)])
+num_s = 1000
+parameter_values = Dict(u_inner .=> [rand(num_s) for i in 1:length(u_inner)])
 
 # The iterator
 problem_iterator = ProblemIterator(parameter_values)
-save(problem_iterator, joinpath(data_dir, "input_" * save_name), CSVFile)
-
+input_file = "input_" * save_file
+save(problem_iterator, joinpath(data_dir, input_file), CSVFile)
+input_file = input_file * "." * string(CSVFile)
 # CSV recorder to save the optimal primal and dual decision values
-recorder = Recorder{CSVFile}(joinpath(data_dir, "output_" * save_name); model=inner_model)
+output_file = "output_" * save_file
+recorder = Recorder{CSVFile}(joinpath(data_dir, output_file); model=inner_model)
+output_file = output_file * "." * string(CSVFile)
 
 # Finally solve all problems described by the iterator
 solve_batch(problem_iterator, recorder)
+
+# Read input and output data
+input_data = CSV.read(joinpath(data_dir, input_file), DataFrame)
+output_data = CSV.read(joinpath(data_dir, output_file), DataFrame)
+
+# Separate input and output variables
+output_variables = output_data[!, :objective]
+input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Symbol.(bin_vars_names)] # just use success solves
+
 
 ##############
 # Fit DNN approximator
@@ -158,10 +199,10 @@ solve_batch(problem_iterator, recorder)
 
 # optimiser=Flux.Optimise.Adam()
 optimiser=ConvexRule(
-    Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+    Flux.Optimise.Adam(0.01, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
 )
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder([1024, 300, 64, 32]), # [1024, 300, 64, 32]
+    builder=FullyConnectedBuilder([1024, 1024, 300, 64, 32]), # [1024, 300, 64, 32]
     rng=123,
     epochs=100,
     optimiser=optimiser,
@@ -169,11 +210,14 @@ nn = MultitargetNeuralNetworkRegressor(;
     batch_size=24,
 )
 
-# Define the machine
+# Data
 X = hcat(my_storage_vars...)'[:,:]
 y = convert.(Float64, my_storage_obj[:,:])
 
-# constrols
+X = vcat(X, Matrix(input_features))
+y = vcat(y, output_variables)
+
+# Constrols
 
 clear() = begin
     global losses = []
@@ -200,6 +244,7 @@ controls=[Step(1),
     WithIterationsDo(update_epochs)
 ]
 
+# WIP
 function SobolevLoss_mse(x, y)
     o_term = Flux.mse(x, y[:, 1])
     d_term = Flux.mse(gradient( ( _x ) -> sum(layer( _x )), x), y[:, 2:end])
@@ -209,10 +254,11 @@ end
 iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
-        resampling=Holdout(fraction_train=0.7),
-        measure = Flux.mse,
+        resampling=Holdout(fraction_train=0.8),
+        measure = l2,
 )
 
+# Fit model
 clear()
 mach = machine(iterated_pipe, X, y)
 fit!(mach; verbosity=2)
@@ -237,9 +283,6 @@ function NNlib.relu(ex::AffExpr)
     @constraint(model, relu_out >= ex)
     return relu_out
 end
-
-# Get upper model
-upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(model)
 
 # add nn to model
 bin_vars_upper = [inner_2_upper_map[var] for var in bin_vars]
