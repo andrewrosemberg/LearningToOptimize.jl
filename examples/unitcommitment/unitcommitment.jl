@@ -17,15 +17,7 @@ data_dir = joinpath(pwd(), "examples/unitcommitment", "data") # joinpath(dirname
 ##############
 case_name = "case300"
 date = "2017-01-01"
-instance.time = 2
 save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(instance.time)
-instance = UnitCommitment.read_benchmark(
-    joinpath("matpower", case_name, date),
-)
-
-model = build_model_uc(instance)
-uc_bnb_dataset(model, save_file; data_dir=data_dir)
-uc_random_dataset!(model, save_file; data_dir=data_dir)
 
 ##############
 # Fit DNN approximator

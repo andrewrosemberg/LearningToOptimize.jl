@@ -15,6 +15,7 @@ using CSV
 using UUIDs
 using Arrow
 using SparseArrays
+using Statistics
 
 import UnitCommitment:
     Formulation,
@@ -22,9 +23,9 @@ import UnitCommitment:
     MorLatRam2013,
     ShiftFactorsFormulation
 
-function uc_load_disturbances!(instance; load_disturbances_range=-20:20)
+function uc_load_disturbances!(instance, nominal_loads; load_disturbances_range=-20:20)
     for bus in instance.buses
-        bus.load = bus.load .+ rand(load_disturbances_range)
+        bus.load = nominal_loads .+ rand(load_disturbances_range)
         bus.load = max.(bus.load, 0.0)
     end
 end
@@ -77,7 +78,7 @@ end
 """
     Build branch and bound dataset
 """
-function uc_bnb_dataset(model, save_file; data_dir=pwd(), batch_id = uuid1(), filetype=ArrowFile)
+function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), data_dir=pwd(), batch_id = uuid1(), filetype=ArrowFile)
     ##############
     # Solve and store solutions
     ##############
@@ -195,37 +196,54 @@ end
 """
     Enhance dataset
 """
-function uc_random_dataset!(inner_model, save_file; delete_objective=false, inner_solver=() -> POI.Optimizer(Gurobi.Optimizer()), data_dir=pwd(), filetype=ArrowFile, num_s = 1000, non_zero_units = 0.3)
-    MOI.set(inner_model, Gurobi.CallbackFunction(), nothing)
-    bin_vars, bin_vars_names = bin_variables_retriever(inner_model)
+function uc_random_dataset!(instance, save_file; model=build_model_uc(instance), delete_objective=false, inner_solver=() -> POI.Optimizer(Gurobi.Optimizer()), data_dir=pwd(), filetype=ArrowFile, num_s = 1000, non_zero_units = 0.15)
+    MOI.set(model, Gurobi.CallbackFunction(), nothing)
+    bin_vars, bin_vars_names = bin_variables_retriever(model)
     # Remove binary constraints
-    upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
+    upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(model)
 
     # delete binary constraints from inner model
-    delete_binary_terms!(inner_model; delete_objective=delete_objective)
+    delete_binary_terms!(model; delete_objective=delete_objective)
     # add deficit constraints
-    add_deficit_constraints!(inner_model)
+    add_deficit_constraints!(model)
     # link binary variables from upper to inner model
-    upper_2_inner = fix_binary_variables!(inner_model, inner_2_upper_map)
+    upper_2_inner = fix_binary_variables!(model, inner_2_upper_map)
     # get parameters from inner model in the right order
     u_inner = [upper_2_inner[inner_2_upper_map[var]] for var in bin_vars]
     # set names
     set_name.(u_inner, bin_vars_names)
     # set solver
-    set_optimizer(inner_model, inner_solver)
+    set_optimizer(model, inner_solver)
     # Parameter values
     u_values = abs.(Matrix(hcat([sprandn(length(u_inner), 1, non_zero_units) for i in 1:num_s]...)'))
     u_values = min.(u_values, 1.0)
-    parameter_values = Dict(u_inner .=> eachcol(u_values))
-
+    units_on = sum(u_values, dims=1)
+    @info "Number of units on: " mean(units_on) std(units_on) minimum(units_on) maximum(units_on)
+    parameter_values = Dict(u_inner .=> Array.(eachcol(u_values)))
     # The iterator
     problem_iterator = ProblemIterator(parameter_values)
     input_file = "input_" * save_file
     save(problem_iterator, joinpath(data_dir, input_file), filetype)
     input_file = input_file * "." * string(filetype)
+    # Add load data to input file
+    df_in = if filetype === ArrowFile
+        Arrow.Table(input_file) |> DataFrame
+    else
+        CSV.read(joinpath(data_dir, input_file), DataFrame)
+    end
+    for bus in instance.buses
+        for t in 1:instance.time
+            df_in[!, Symbol("load_" * string(bus.name) * "_" * string(t))] = fill(bus.load[t], length(df_in.id))
+        end
+    end
+    if filetype === ArrowFile
+        Arrow.write(joinpath(data_dir, input_file), df_in)
+    else
+        CSV.write(joinpath(data_dir, input_file), df_in)
+    end
     # CSV recorder to save the optimal primal and dual decision values
     output_file = "output_" * save_file
-    recorder = Recorder{filetype}(joinpath(data_dir, output_file); model=inner_model)
+    recorder = Recorder{filetype}(joinpath(data_dir, output_file); model=model)
     output_file = output_file * "." * string(filetype)
 
     # Finally solve all problems described by the iterator
