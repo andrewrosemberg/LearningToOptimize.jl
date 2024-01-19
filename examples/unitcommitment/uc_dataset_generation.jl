@@ -2,15 +2,17 @@
 ############## Unit Commitment Dataset Generation ##############
 ################################################################
 
+using Distributed
+
 ##############
 # Load Functions
 ##############
 
-include("examples/unitcommitment/bnb_dataset.jl")
+@everywhere include(joinpath(dirname(@__FILE__), "bnb_dataset.jl"))
 
-include("src/cutting_planes.jl")
+@everywhere include(joinpath(dirname(dirname(@__DIR__)), "src/cutting_planes.jl"))
 
-data_dir = joinpath(pwd(), "examples/unitcommitment", "data") # joinpath(dirname(@__FILE__), "data")
+data_dir = joinpath(dirname(@__FILE__), "data") # joinpath(pwd(), "examples/unitcommitment", "data")
 
 ##############
 # Parameters
@@ -49,7 +51,7 @@ for i in 1:length(instance.bus)
     nominal_loads[i] = bus.load[1:horizon]
 end
 
-for _ in 1:num_batches
+@distributed for _ in 1:num_batches
     # perturb loads
     uc_load_disturbances!(instance, nominal_loads)
     model = build_model_uc(instance)
