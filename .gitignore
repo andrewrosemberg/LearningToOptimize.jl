@@ -9,3 +9,6 @@ Manifest.toml
 *.m
 *.csv
 .DS_Store
+*.out
+*.sbatch
+examples/unitcommitment/app/*

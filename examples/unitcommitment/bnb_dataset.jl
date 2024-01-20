@@ -1,7 +1,7 @@
 ##############
 # Load Packages
 ##############
-# Data Generation
+
 using LinearAlgebra
 using Gurobi
 using L2O
@@ -196,7 +196,7 @@ end
 """
     Enhance dataset
 """
-function uc_random_dataset!(instance, save_file; model=build_model_uc(instance), delete_objective=false, inner_solver=() -> POI.Optimizer(Gurobi.Optimizer()), data_dir=pwd(), filetype=ArrowFile, num_s = 1000, non_zero_units = 0.15)
+function uc_random_dataset!(instance, save_file; model=build_model_uc(instance), delete_objective=false, inner_solver=() -> POI.Optimizer(Gurobi.Optimizer()), data_dir=pwd(), filetype=ArrowFile, num_s = 1000, non_zero_units = 0.15, batch_id = uuid1())
     MOI.set(model, Gurobi.CallbackFunction(), nothing)
     bin_vars, bin_vars_names = bin_variables_retriever(model)
     # Remove binary constraints
@@ -222,12 +222,12 @@ function uc_random_dataset!(instance, save_file; model=build_model_uc(instance),
     parameter_values = Dict(u_inner .=> Array.(eachcol(u_values)))
     # The iterator
     problem_iterator = ProblemIterator(parameter_values)
-    input_file = "input_" * save_file
+    input_file = save_file * "_input_" * string(batch_id)
     save(problem_iterator, joinpath(data_dir, input_file), filetype)
     input_file = input_file * "." * string(filetype)
     # Add load data to input file
     df_in = if filetype === ArrowFile
-        Arrow.Table(input_file) |> DataFrame
+        Arrow.Table(joinpath(data_dir, input_file)) |> DataFrame
     else
         CSV.read(joinpath(data_dir, input_file), DataFrame)
     end
@@ -242,7 +242,7 @@ function uc_random_dataset!(instance, save_file; model=build_model_uc(instance),
         CSV.write(joinpath(data_dir, input_file), df_in)
     end
     # CSV recorder to save the optimal primal and dual decision values
-    output_file = "output_" * save_file
+    output_file = save_file * "_output_" * string(batch_id)
     recorder = Recorder{filetype}(joinpath(data_dir, output_file); model=model)
     output_file = output_file * "." * string(filetype)
 
