@@ -15,6 +15,7 @@ julia --project=. -t1 --trace-compile=app/precompile.jl uc_dataset_generation.jl
 ```julia
 
 using PackageCompiler
+using REPL; REPL.__init__()
 create_sysimage(
     [
         "LinearAlgebra",
