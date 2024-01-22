@@ -29,6 +29,9 @@ horizon = parse(Int, ARGS[5]) # 2
 save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
 num_batches = parse(Int, ARGS[6]) # 10
 solve_nominal = parse(Bool, ARGS[7]) #true
+data_dir = joinpath(data_dir, case_name, date, "h" * string(horizon))
+mkpath(joinpath(data_dir, "input"))
+mkpath(joinpath(data_dir, "output"))
 
 @info "Case: $case_name, Date: $date, Horizon: $horizon" num_batches solve_nominal
 
@@ -64,3 +67,4 @@ end
     uc_bnb_dataset(instance, save_file; data_dir=data_dir, model=model)
     uc_random_dataset!(instance, save_file; data_dir=data_dir, model=model)
 end
+

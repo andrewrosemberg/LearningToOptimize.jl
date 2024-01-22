@@ -24,8 +24,9 @@ import UnitCommitment:
     ShiftFactorsFormulation
 
 function uc_load_disturbances!(instance, nominal_loads; load_disturbances_range=-20:20)
-    for bus in instance.buses
-        bus.load = nominal_loads .+ rand(load_disturbances_range)
+    for i in 1:length(instance.buses)
+        bus = instance.buses[i]
+        bus.load = nominal_loads[i] .+ rand(load_disturbances_range)
         bus.load = max.(bus.load, 0.0)
     end
 end
