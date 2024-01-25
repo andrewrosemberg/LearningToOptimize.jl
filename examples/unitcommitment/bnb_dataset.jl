@@ -167,7 +167,7 @@ function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), dat
     @info "Solved nominal instance" optimal_obj length(my_callback_function.my_storage_vars)
 
     # post process
-    is_relaxed = findall(x -> x == 1, is_relaxed)
+    is_relaxed = findall(x -> x == 1, my_callback_function.is_relaxed)
     my_storage_vars = my_callback_function.my_storage_vars
     my_storage_obj = my_callback_function.my_storage_obj
 
@@ -203,6 +203,7 @@ function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), dat
     # Save
     if filetype === ArrowFile
         Arrow.write(joinpath(data_dir, save_file * "_input_" * string(batch_id) * ".arrow"), df_in)
+        println(df_out)
         Arrow.write(joinpath(data_dir, save_file * "_output_" * string(batch_id) * ".arrow"), df_out)
     else
         CSV.write(joinpath(data_dir, save_file * "_input_" * string(batch_id) * ".csv"), df_in)
