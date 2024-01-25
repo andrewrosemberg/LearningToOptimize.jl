@@ -3,6 +3,7 @@
 ################################################################
 
 using Distributed
+using Random
 
 ##############
 # Load Functions
@@ -23,12 +24,12 @@ data_dir = joinpath(dirname(@__FILE__), "data") # joinpath(pwd(), "examples/unit
 ##############
 # Parameters
 ##############
-case_name = ARGS[3] #"case300"
-date = ARGS[4] # "2017-01-01"
-horizon = parse(Int, ARGS[5]) # 2
+case_name = ARGS[3] # case_name = "case300"
+date = ARGS[4] # date="2017-01-01"
+horizon = parse(Int, ARGS[5]) # horizon=2
 save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
-num_batches = parse(Int, ARGS[6]) # 10
-solve_nominal = parse(Bool, ARGS[7]) #true
+num_batches = parse(Int, ARGS[6]) # num_batches=10
+solve_nominal = parse(Bool, ARGS[7]) # solve_nominal=true
 data_dir = joinpath(data_dir, case_name, date, "h" * string(horizon))
 mkpath(joinpath(data_dir, "input"))
 mkpath(joinpath(data_dir, "output"))
@@ -60,11 +61,19 @@ for i in 1:length(instance.buses)
     nominal_loads[i] = bus.load[1:horizon]
 end
 
-@distributed for _ in 1:num_batches
-    # perturb loads
-    uc_load_disturbances!(instance, nominal_loads)
-    model = build_model_uc(instance)
-    uc_bnb_dataset(instance, save_file; data_dir=data_dir, model=model)
-    uc_random_dataset!(instance, save_file; data_dir=data_dir, model=model)
+@distributed for i in 1:num_batches
+    rng = MersenneTwister(round(Int, i * time()))
+    instance_ = deepcopy(instance)
+    uc_load_disturbances!(rng, instance_, nominal_loads)
+    # perturbed loads
+    perturbed_loads_sum = 0.0
+    for i in 1:length(instance_.buses)
+        bus = instance_.buses[i]
+        perturbed_loads_sum += sum(bus.load)
+    end
+    @info "Solving batch $i" rng perturbed_loads_sum
+    model = build_model_uc(instance_)
+    uc_bnb_dataset(instance_, save_file; data_dir=data_dir, model=model)
+    uc_random_dataset!(instance_, save_file; data_dir=data_dir, model=model)
 end
 

@@ -16,6 +16,7 @@ using UUIDs
 using Arrow
 using SparseArrays
 using Statistics
+using Random
 
 import UnitCommitment:
     Formulation,
@@ -23,10 +24,10 @@ import UnitCommitment:
     MorLatRam2013,
     ShiftFactorsFormulation
 
-function uc_load_disturbances!(instance, nominal_loads; load_disturbances_range=-20:20)
+function uc_load_disturbances!(rng, instance, nominal_loads; load_disturbances_range=-20:20)
     for i in 1:length(instance.buses)
         bus = instance.buses[i]
-        bus.load = nominal_loads[i] .+ rand(load_disturbances_range)
+        bus.load = nominal_loads[i] .+ rand(rng, load_disturbances_range)
         bus.load = max.(bus.load, 0.0)
     end
 end
@@ -76,6 +77,64 @@ function bin_variables_retriever(model)
     return bin_vars, bin_vars_names
 end
 
+mutable struct StorageCallback <: Function
+    model
+    bin_vars
+    my_storage_vars
+    my_storage_obj
+    is_relaxed
+end
+function StorageCallback(model, bin_vars; maxiter=999999)
+    return StorageCallback(
+        model,
+        bin_vars,
+        [],
+        [],
+        [],
+    )
+end
+
+function (callback::StorageCallback)(cb_data, cb_where::Cint)
+    # You can select where the callback is run
+    if cb_where == GRB_CB_MIPNODE
+        # prep
+        obj_terms = objective_function(callback.model).terms
+        obj_terms_gurobi = [obj_terms[var] for var in all_variables(callback.model) if haskey(obj_terms, var)]
+        num_all_var = num_variables(callback.model)
+        # save
+        resultobj = Ref{Cint}()
+        GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_STATUS, resultobj)
+        if resultobj[] != GRB_OPTIMAL
+            return  # Solution is something other than optimal.
+        end
+        gurobi_indexes_all = [Gurobi.column(backend(callback.model).optimizer.model, callback.model.moi_backend.model_to_optimizer_map[var.index]) for var in all_variables(callback.model) if haskey(obj_terms, var)]
+        gurobi_indexes_bin = [Gurobi.column(backend(callback.model).optimizer.model, callback.model.moi_backend.model_to_optimizer_map[callback.bin_vars[i].index]) for i in 1:length(callback.bin_vars)]
+        
+        resultP = Vector{Cdouble}(undef, num_all_var)
+        GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_REL, resultP)
+        push!(callback.my_storage_vars, resultP[gurobi_indexes_bin])
+        # Get the objective value
+        push!(callback.my_storage_obj, dot(obj_terms_gurobi, resultP[gurobi_indexes_all]))
+        # mark as relaxed
+        push!(callback.is_relaxed, 1)
+        return
+    end
+    if cb_where == GRB_CB_MIPSOL
+        # Before querying `callback_value`, you must call:
+        Gurobi.load_callback_variable_primal(cb_data, cb_where)
+        # Get the values of the variables
+        x = [callback_value(cb_data, var) for var in callback.bin_vars]
+        push!(callback.my_storage_vars, x)
+        # Get the objective value
+        obj = Ref{Cdouble}()
+        GRBcbget(cb_data, cb_where, GRB_CB_MIPSOL_OBJ, obj)
+        push!(callback.my_storage_obj, obj[])
+        # mark as not relaxed
+        push!(callback.is_relaxed, 0)
+        return
+    end
+end
+
 """
     Build branch and bound dataset
 """
@@ -89,66 +148,28 @@ function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), dat
     @assert all([is_binary(var) for var in bin_vars])
     @assert length(bin_vars) == length(all_binary_variables(model))
 
-    obj_terms = objective_function(model).terms
-    obj_terms_gurobi = [obj_terms[var] for var in all_variables(model) if haskey(obj_terms, var)]
-    num_bin_var = length(bin_vars)
-    num_all_var = num_variables(model)
-
-    global my_storage_vars = []
-    global my_storage_obj = []
-    global is_relaxed = []
-    global non_optimals = []
-    function my_callback_function(cb_data, cb_where::Cint)
-        # You can select where the callback is run
-        if cb_where == GRB_CB_MIPNODE
-            resultobj = Ref{Cint}()
-            GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_STATUS, resultobj)
-            if resultobj[] != GRB_OPTIMAL
-                push!(non_optimals, resultobj[])
-                return  # Solution is something other than optimal.
-            end
-            gurobi_indexes_all = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[var.index]) for var in all_variables(model) if haskey(obj_terms, var)]
-            gurobi_indexes_bin = [Gurobi.column(backend(model).optimizer.model, model.moi_backend.model_to_optimizer_map[bin_vars[i].index]) for i in 1:length(bin_vars)]
-            resultP = Vector{Cdouble}(undef, num_all_var)
-            GRBcbget(cb_data, cb_where, GRB_CB_MIPNODE_REL, resultP)
-            push!(my_storage_vars, resultP[gurobi_indexes_bin])
-            # Get the objective value
-            push!(my_storage_obj, dot(obj_terms_gurobi, resultP[gurobi_indexes_all]))
-            # mark as relaxed
-            push!(is_relaxed, 1)
-            return
-        end
-        if cb_where == GRB_CB_MIPSOL
-            # Before querying `callback_value`, you must call:
-            Gurobi.load_callback_variable_primal(cb_data, cb_where)
-            # Get the values of the variables
-            x = [callback_value(cb_data, var) for var in bin_vars]
-            # push
-            push!(my_storage_vars, x)
-            # Get the objective value
-            obj = Ref{Cdouble}()
-            GRBcbget(cb_data, cb_where, GRB_CB_MIPSOL_OBJ, obj)
-            # push
-            push!(my_storage_obj, obj[])
-            # mark as not relaxed
-            push!(is_relaxed, 0)
-            return
-        end
-        return
-    end
+    # Callback
+    my_callback_function = StorageCallback(model, bin_vars)
+    # Set callback
     MOI.set(model, Gurobi.CallbackFunction(), my_callback_function)
 
     # JuMP.optimize!(model)
     UnitCommitment.optimize!(model)
+    @info "status: " termination_status(model)
     # push optimal solution
     x = [value(var) for var in bin_vars]
-    push!(my_storage_vars, x)
+    push!(my_callback_function.my_storage_vars, x)
     optimal_obj = objective_value(model)
-    push!(my_storage_obj, optimal_obj)
+    push!(my_callback_function.my_storage_obj, optimal_obj)
     # mark as not relaxed
-    push!(is_relaxed, 0)
+    push!(my_callback_function.is_relaxed, 0)
 
+    @info "Solved nominal instance" optimal_obj length(my_callback_function.my_storage_vars)
+
+    # post process
     is_relaxed = findall(x -> x == 1, is_relaxed)
+    my_storage_vars = my_callback_function.my_storage_vars
+    my_storage_obj = my_callback_function.my_storage_obj
 
     # Data
     X = hcat(my_storage_vars...)'[:,:]
