@@ -38,27 +38,56 @@ input_table.total_commitment = sum(eachcol(input_table[!, commit_columns]))
 input_table.total_load = sum(eachcol(input_table[!, load_columns]))
 
 # join input and output tables keep on id and keep only total_commitment and objective
-table_train = innerjoin(input_table, output_table[!, [:id, :objective]]; on=:id)[!, [:id, :total_commitment, :objective]]
-# separate bnb into entries that have total commitment different from integer and those that have
-# total commitment equal to integer
-table_train_bnb_not_integer = table_train_bnb[table_train_bnb.total_commitment .!= floor.(table_train_bnb.total_commitment), :]
-table_train_bnb_integer = table_train_bnb[table_train_bnb.total_commitment .== floor.(table_train_bnb.total_commitment), :]
+table_train = innerjoin(input_table, output_table[!, [:id, :objective, :status]]; on=:id)[!, [:id, :total_commitment, :objective, :status, :total_load]]
 
-# plot the data
+# separate infeasible from feasible
+table_train_optimal = table_train[table_train.status .== "OPTIMAL", :]
+table_train_infeasible = table_train[table_train.status .== "INFEASIBLE", :]
+table_train_localopt = table_train[table_train.status .== "LOCALLY_SOLVED", :]
+
+# plot objective vs total commitment
 # now with the y axis on the log scale
+plotly()
 plt = scatter(
-    table_train_random.total_commitment, 
-    table_train_random.objective, 
-    label="Random", xlabel="Total Commitment", ylabel="Objective", 
+    table_train_optimal.total_commitment, 
+    table_train_optimal.objective, 
+    label="Optimal", xlabel="Total Commitment", ylabel="Objective", 
     title="", color=:red, yscale=:log10, legend=:outertopright,
-    alpha=0.2
+    # marker size
+    ms=10,
 );
 scatter!(plt, 
-    table_train_bnb_not_integer.total_commitment, 
-    table_train_bnb_not_integer.objective, 
-    label="Branch and Bound Node", color=:blue,
-    marker=:x
+    table_train_localopt.total_commitment, 
+    table_train_localopt.objective, 
+    label="Local Optimum", color=:blue,
+    marker=:o, alpha=0.5
 );
-scatter!(plt, table_train_bnb_integer.total_commitment, table_train_bnb_integer.objective, label="Branch and Bound Leaf", color=:yellow,
-    alpha=0.2
+scatter!(plt, 
+    table_train_infeasible.total_commitment, 
+    table_train_infeasible.objective, 
+    label="Infeasible", color=:yellow,
+    marker=:square, alpha=0.01, ms=2
+)
+
+# plot objective vs total load
+# now with the y axis on the log scale
+plt2 = scatter(
+    table_train_optimal.total_load, 
+    table_train_optimal.objective, 
+    label="Optimal", xlabel="Total Load", ylabel="Objective", 
+    title="", color=:red, yscale=:log10, legend=:outertopright,
+    # marker size
+    ms=10,
+);
+scatter!(plt2, 
+    table_train_localopt.total_load, 
+    table_train_localopt.objective, 
+    label="Local Optimum", color=:blue,
+    marker=:o, alpha=0.5
+);
+scatter!(plt2, 
+    table_train_infeasible.total_load, 
+    table_train_infeasible.objective, 
+    label="Infeasible", color=:yellow,
+    marker=:square, alpha=0.5
 )
