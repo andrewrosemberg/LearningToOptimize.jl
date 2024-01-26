@@ -13,7 +13,10 @@ using MLJFlux
 using CUDA # if error run CUDA.set_runtime_version!(v"12.1.0")
 using Flux
 using MLJ
+
 using DataFrames
+
+using Wandb, Dates, Logging
 
 include(joinpath(dirname(@__FILE__), "bnb_dataset.jl"))
 
