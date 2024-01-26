@@ -45,6 +45,7 @@ for batch_id in batch_ids
     
     if length(file_outs_names) == 1
         mv(file_outs[1], joinpath(case_file_path, "output", file_outs_names[1]), force=true)
+        continue
     end
 
     # Load input and output data tables
