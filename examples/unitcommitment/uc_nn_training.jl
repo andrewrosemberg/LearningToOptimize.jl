@@ -28,9 +28,9 @@ data_dir = joinpath(dirname(@__FILE__), "data")
 # Parameters
 ##############
 filetype=ArrowFile
-case_name = ARGS[3] # case_name = "case300"
-date = ARGS[4] # date="2017-01-01"
-horizon = parse(Int, ARGS[5]) # horizon=2
+case_name = ARGS[1] # case_name = "case300"
+date = ARGS[2] # date="2017-01-01"
+horizon = parse(Int, ARGS[3]) # horizon=2
 save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
 data_dir = joinpath(data_dir, case_name, date, "h" * string(horizon))
 
