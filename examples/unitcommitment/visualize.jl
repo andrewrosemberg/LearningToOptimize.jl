@@ -6,7 +6,7 @@ using DataFrames
 case_name = "case300"
 date = "2017-01-01"
 horizon = "2"
-path_dataset = joinpath(pwd(), "examples", "unitcommitment", "data")
+path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name, date, "h"*horizon)
 
 # Load input and output data tables

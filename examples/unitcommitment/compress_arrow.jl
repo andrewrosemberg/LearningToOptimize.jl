@@ -26,8 +26,10 @@ batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 file_name = split(split(file_ins[1], "_input")[1], "/")[end]
 
 # move input files to input folder
-for file in file_ins
-    mv(file, joinpath(case_file_path, "input"))
+for file in iter_files
+    if occursin("input", file)
+        mv(joinpath(case_file_path, file), joinpath(case_file_path, "input", file))
+    end
 end
 
 # compress output files per batch id
