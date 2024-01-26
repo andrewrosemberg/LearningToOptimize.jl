@@ -19,7 +19,7 @@ using Random
 
 @everywhere include(joinpath(dirname(dirname(@__DIR__)), "src/cutting_planes.jl"))
 
-data_dir = joinpath(dirname(@__FILE__), "data") # joinpath(pwd(), "examples/unitcommitment", "data")
+data_dir = joinpath(dirname(@__FILE__), "data")
 
 ##############
 # Parameters
