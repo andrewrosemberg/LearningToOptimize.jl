@@ -1,7 +1,16 @@
+authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
 name = "L2O"
 uuid = "e1d8bfa7-c465-446a-84b9-451470f6e76c"
-authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
 version = "1.2.0-DEV"
+
+[compat]
+Arrow = "2"
+CSV = "0.10"
+Dualization = "0.5"
+JuMP = "1"
+ParametricOptInterface = "0.7"
+Zygote = "^0.6.68"
+julia = "1.6"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
@@ -19,17 +28,9 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[compat]
-Arrow = "2"
-CSV = "0.10"
-Dualization = "0.5"
-JuMP = "1"
-ParametricOptInterface = "0.7"
-Zygote ="^0.6.68"
-julia = "1.6"
-
 [extras]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Clarabel = "61c947e1-3e6d-4ee4-985a-eec8c727bd6e"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
