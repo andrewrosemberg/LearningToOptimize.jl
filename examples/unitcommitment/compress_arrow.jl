@@ -28,7 +28,7 @@ file_name = split(split(file_ins[1], "_input")[1], "/")[end]
 # move input files to input folder
 for file in iter_files
     if occursin("input", file)
-        mv(joinpath(case_file_path, file), joinpath(case_file_path, "input", file))
+        mv(joinpath(case_file_path, file), joinpath(case_file_path, "input", file), force=true)
     end
 end
 
