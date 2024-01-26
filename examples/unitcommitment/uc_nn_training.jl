@@ -57,9 +57,10 @@ input_table = vcat(input_tables...)
 output_table = vcat(output_tables...)
 
 # Separate input and output variables & ignore id time status primal_status dual_status
-y = output_table[!, :objective]
-input_features = innerjoin(input_table, output_table[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+train_table = innerjoin(input_table, output_table[!, [:id, :objective]]; on=:id)
+input_features = train_table[!, Not([:id, :objective])]
 X = Matrix(input_features)
+y = Matrix(train_table[!, [:objective]])
 
 # optimiser=Flux.Optimise.Adam()
 optimiser=ConvexRule(
