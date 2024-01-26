@@ -203,7 +203,6 @@ function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), dat
     # Save
     if filetype === ArrowFile
         Arrow.write(joinpath(data_dir, save_file * "_input_" * string(batch_id) * ".arrow"), df_in)
-        println(df_out)
         Arrow.write(joinpath(data_dir, save_file * "_output_" * string(batch_id) * ".arrow"), df_out)
     else
         CSV.write(joinpath(data_dir, save_file * "_input_" * string(batch_id) * ".csv"), df_in)
@@ -213,7 +212,6 @@ function uc_bnb_dataset(instance, save_file; model=build_model_uc(instance), dat
     @info "Saved dataset to $(data_dir)" batch_id length(instances_ids) length(is_relaxed) optimal_obj
 
     return
-    
 end
 
 """

@@ -61,7 +61,7 @@ for i in 1:length(instance.buses)
     nominal_loads[i] = bus.load[1:horizon]
 end
 
-@distributed for i in 1:num_batches
+@sync @distributed for i in 1:num_batches
     rng = MersenneTwister(round(Int, i * time()))
     instance_ = deepcopy(instance)
     uc_load_disturbances!(rng, instance_, nominal_loads)
@@ -77,3 +77,4 @@ end
     uc_random_dataset!(instance_, save_file; data_dir=data_dir, model=model)
 end
 
+include(joinpath(dirname(@__FILE__), "compress_arrow.jl"))

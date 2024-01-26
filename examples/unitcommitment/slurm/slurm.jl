@@ -15,15 +15,9 @@ end
 
 using Distributed, ClusterManagers
 
-np = 1 #
-addprocs(SlurmManager(np), job_file_loc = ARGS[1], cpus_per_task=24, mem_per_cpu=0, partition="debug", t="08:00:00")
+np = 4 #
+addprocs(SlurmManager(np), job_file_loc = ARGS[1]) #cpus_per_task=24, mem_per_cpu=24, partition="debug", t="08:00:00")
 
 println("We are all connected and ready.")
 
 include(ARGS[2])
-
-# The Slurm resource allocation is released when all the workers have
-# exited
-for i in workers()
-	rmprocs(i)
-end
