@@ -5,16 +5,17 @@ using DataFrames
 case_name = "case300"
 date = "2017-01-01"
 horizon = 2
-path_dataset = joinpath(
+case_file_path = joinpath(
     dirname(@__FILE__), "data", case_name, date, "h" * string(horizon)
 )
-case_file_path = path_dataset # joinpath(path_dataset, case_name)
 
 # Load input and output data tables
 iter_files = readdir(case_file_path)
+
 iter_files = [
-    joinpath(case_file_path, file) for file in iter_files if occursin(case_name, file)
+    file for file in iter_files if occursin(case_name, file) && occursin("arrow", file)
 ]
+
 file_ins = [
     joinpath(case_file_path, file) for file in iter_files if occursin("input", file)
 ]
@@ -33,15 +34,17 @@ for file in iter_files
 end
 
 # compress output files per batch id
-iter_files = readdir(joinpath(case_file_path))
 for batch_id in batch_ids
-    file_outs = [
-        joinpath(case_file_path, file)
+    file_outs_names = [
+        file
         for file in iter_files
-        if occursin("output", file) && occursin(batch_id, file) && occursin("arrow", file)
+        if occursin("output", file) && occursin(batch_id, file)
     ]
-    if length(file_outs) == 1
-        continue
+
+    file_outs = [ joinpath(case_file_path, file) for file in file_outs_names ]
+    
+    if length(file_outs_names) == 1
+        mv(file_outs[1], joinpath(case_file_path, "output", file_outs_names[1]), force=true)
     end
 
     # Load input and output data tables
