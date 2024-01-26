@@ -13,3 +13,4 @@ Manifest.toml
 *.sbatch
 examples/unitcommitment/app/*
 *.edu
+examples/unitcommitment/wandb/*

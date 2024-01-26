@@ -65,17 +65,32 @@ input_features = train_table[!, Not([:id, :objective])]
 X = Matrix(input_features)
 y = Matrix(train_table[!, [:objective]])
 
-# optimiser=Flux.Optimise.Adam()
-optimiser=ConvexRule(
-    Flux.Optimise.Adam(0.01, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+# Define model and logger
+lg = WandbLogger(
+    project = "unit_commitment_proxies",
+    name = "$(case_name)-$(date)-h$(horizon)-$(now())",
+    config = Dict(
+        "layers" => [300, 64, 32], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
+        "batch_size" => 24,
+        "optimiser" => "ConvexRule",
+        "learning_rate" => 0.01,
+        "rng" => 123,
+    )
 )
+
+global_logger(lg)
+
+optimiser=ConvexRule(
+    Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+)
+
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder([1024, 1024, 300, 64, 32]), # [1024, 300, 64, 32]
-    rng=123,
+    builder=FullyConnectedBuilder(get_config(lg, "layers")),
+    rng=get_config(lg, "rng"),
     epochs=100,
     optimiser=optimiser,
     acceleration=CUDALibs(),
-    batch_size=24,
+    batch_size=get_config(lg, "batch_size"),
 )
 
 # Constrols
@@ -88,12 +103,19 @@ clear() = begin
 end
 
 function update_loss(loss)
-    @info "Loss: $loss"
+    @info "metrics" loss=loss
     push!(losses, loss)
+    return nothing
 end
-update_training_loss(report) =
+
+function update_training_loss(report)
+    @info "training_losses" training_loss=report.training_losses[end]
     push!(training_losses,
-          report.training_losses[end])
+          report.training_losses[end]
+    )
+    return nothing
+end
+
 update_epochs(epoch) = push!(epochs, epoch)
 
 controls=[Step(1),
@@ -123,3 +145,6 @@ iterated_pipe =
 clear()
 mach = machine(iterated_pipe, X, y)
 fit!(mach; verbosity=2)
+
+# Finish the run
+close(lg)
