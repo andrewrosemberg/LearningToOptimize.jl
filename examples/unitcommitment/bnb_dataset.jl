@@ -252,6 +252,8 @@ function uc_random_dataset!(instance, save_file; model=build_model_uc(instance),
     else
         CSV.read(joinpath(data_dir, input_file), DataFrame)
     end
+    # delete old file
+    rm(joinpath(data_dir, input_file))
     for bus in instance.buses
         for t in 1:instance.time
             df_in[!, Symbol("load_" * string(bus.name) * "_" * string(t))] = fill(bus.load[t], length(df_in.id))
