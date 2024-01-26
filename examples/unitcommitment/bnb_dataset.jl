@@ -254,11 +254,13 @@ function uc_random_dataset!(instance, save_file; model=build_model_uc(instance),
     end
     # delete old file
     rm(joinpath(data_dir, input_file))
+    # add loads
     for bus in instance.buses
         for t in 1:instance.time
             df_in[!, Symbol("load_" * string(bus.name) * "_" * string(t))] = fill(bus.load[t], length(df_in.id))
         end
     end
+    # save
     if filetype === ArrowFile
         Arrow.write(joinpath(data_dir, input_file), df_in)
     else
