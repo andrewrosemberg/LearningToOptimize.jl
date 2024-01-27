@@ -62,8 +62,8 @@ output_table = vcat(output_tables...)
 # Separate input and output variables & ignore id time status primal_status dual_status
 train_table = innerjoin(input_table, output_table[!, [:id, :objective]]; on=:id)
 input_features = train_table[!, Not([:id, :objective])]
-X = Matrix(input_features)
-y = Matrix(train_table[!, [:objective]])
+X = Float32.(Matrix(input_features))
+y = Float32.(Matrix(train_table[!, [:objective]]))
 
 # Define model and logger
 lg = WandbLogger(
