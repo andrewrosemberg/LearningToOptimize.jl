@@ -93,7 +93,7 @@ iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
         resampling=Holdout(fraction_train=0.8),
-        measure = l2,
+        measure = Flux.mae,
 )
 
 # Fit model

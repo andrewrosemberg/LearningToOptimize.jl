@@ -87,7 +87,7 @@ optimiser=ConvexRule(
 nn = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder(get_config(lg, "layers")),
     rng=get_config(lg, "rng"),
-    epochs=100,
+    epochs=5000,
     optimiser=optimiser,
     acceleration=CUDALibs(),
     batch_size=get_config(lg, "batch_size"),
@@ -95,33 +95,35 @@ nn = MultitargetNeuralNetworkRegressor(;
 
 # Constrols
 
-clear() = begin
-    global losses = []
-    global training_losses = []
-    global epochs = []
-    return nothing
-end
+# clear() = begin
+#     global losses = []
+#     global training_losses = []
+#     global epochs = []
+#     return nothing
+# end
 
 function update_loss(loss)
     @info "metrics" loss=loss
-    push!(losses, loss)
+    # push!(losses, loss)
     return nothing
 end
 
 function update_training_loss(report)
-    @info "training_losses" training_loss=report.training_losses[end]
-    push!(training_losses,
-          report.training_losses[end]
-    )
+    @info "metrics" training_loss=report.training_losses[end]
+    # push!(training_losses,
+    #       report.training_losses[end]
+    # )
     return nothing
 end
 
-update_epochs(epoch) = push!(epochs, epoch)
+update_epochs(epoch) = @info "log" epoch=epoch # push!(epochs, epoch)
 
 controls=[Step(1),
-    NumberSinceBest(6),
+    # NumberSinceBest(20),
+    PQ(),
+    GL(; alpha=2.0),
     InvalidValue(),
-    TimeLimit(5/60),
+    TimeLimit(; t=5/60),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
@@ -137,12 +139,12 @@ controls=[Step(1),
 iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
-        resampling=Holdout(fraction_train=0.8),
-        measure = l2,
+        resampling=Holdout(fraction_train=0.7),
+        measure = Flux.mae,
 )
 
 # Fit model
-clear()
+# clear()
 mach = machine(iterated_pipe, X, y)
 fit!(mach; verbosity=2)
 
