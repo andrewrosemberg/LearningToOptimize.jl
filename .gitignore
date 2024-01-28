@@ -14,3 +14,4 @@ Manifest.toml
 examples/unitcommitment/app/*
 *.edu
 examples/unitcommitment/wandb/*
+*.png
