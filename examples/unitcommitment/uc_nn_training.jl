@@ -17,6 +17,7 @@ using MLJ
 using DataFrames
 
 using Wandb, Dates, Logging
+using Statistics
 
 include(joinpath(dirname(@__FILE__), "bnb_dataset.jl"))
 
@@ -85,6 +86,14 @@ optimiser=ConvexRule(
     Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
 )
 
+function relative_rmse(ŷ, y)
+    return sqrt(mean(((ŷ .- y) ./ y) .^ 2))
+end
+
+function relative_mae(ŷ, y)
+    return mean(abs.((ŷ .- y) ./ y))
+end
+
 nn = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder(get_config(lg, "layers")),
     rng=get_config(lg, "rng"),
@@ -93,6 +102,7 @@ nn = MultitargetNeuralNetworkRegressor(;
     acceleration=CUDALibs(),
     batch_size=get_config(lg, "batch_size"),
     lambda=get_config(lg, "lambda"),
+    loss=relative_rmse,
 )
 
 # Constrols
@@ -149,7 +159,7 @@ iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
         resampling=Holdout(fraction_train=0.7),
-        measure = Flux.mae,
+        measure = relative_mae,
 )
 
 # Fit model
