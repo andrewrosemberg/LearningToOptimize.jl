@@ -1,6 +1,11 @@
-<img src="https://raw.githubusercontent.com/andrewrosemberg/L2O.jl/main/L2O.jpg" alt="logo" width="100px"/>
 
-# L2O.jl
+<div style="overflow: auto;">
+    <h1 style="float: left;">L2O.jl</h1>
+    <div style="float: right; margin-left: 20px;">
+      <img src="https://raw.githubusercontent.com/andrewrosemberg/L2O.jl/main/L2O.jpg" alt="Logo" width="100" align="right">
+    </div>
+</div>
+
 Learning to optimize (L2O) package that provides basic functionalities to help fit proxy models for optimization.
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://andrewrosemberg.github.io/L2O.jl/stable/)
