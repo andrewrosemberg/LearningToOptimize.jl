@@ -89,7 +89,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
                                                                    [CSVFile, ArrowFile]
         function _primal_builder!(; recorder=nothing)
             model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
-            parameters = @variable(model, _p in POI.Parameter(1.0))
+            parameters = @variable(model, _p in MOI.Parameter(1.0))
             @variable(model, x)
             @constraint(model, cons, x + parameters >= 3)
             @objective(model, Min, 2x)

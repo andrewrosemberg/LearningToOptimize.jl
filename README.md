@@ -21,7 +21,7 @@ The user needs to first define a problem iterator:
 # The problem to iterate over
 model = Model(() -> POI.Optimizer(HiGHS.Optimizer()))
 @variable(model, x)
-p = @variable(model, p in POI.Parameter(1.0)) # The parameter (defined using POI)
+p = @variable(model, p in MOI.Parameter(1.0)) # The parameter (defined using POI)
 @constraint(model, cons, x + p >= 3)
 @objective(model, Min, 2x)
 
