@@ -70,7 +70,7 @@ lg = WandbLogger(
     project = "unit_commitment_proxies",
     name = "$(case_name)-$(date)-h$(horizon)-$(now())",
     config = Dict(
-        "layers" => [1024, 1024, 300, 64, 32], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
+        "layers" => [1024, 512, 64], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
         "batch_size" => 24,
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
@@ -130,7 +130,7 @@ end
 controls=[Step(1),
     # NumberSinceBest(20),
     # PQ(; alpha=0.9, k=30),
-    GL(; alpha=20.0),
+    GL(; alpha=200.0),
     InvalidValue(),
     TimeLimit(; t=1),
     WithLossDo(update_loss),
