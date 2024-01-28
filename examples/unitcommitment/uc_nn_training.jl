@@ -70,15 +70,16 @@ lg = WandbLogger(
     project = "unit_commitment_proxies",
     name = "$(case_name)-$(date)-h$(horizon)-$(now())",
     config = Dict(
-        "layers" => [300, 64, 32], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
+        "layers" => [1024, 1024, 300, 64, 32], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
         "batch_size" => 24,
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
         "rng" => 123,
+        "lambda" => 0.3,
     )
 )
 
-global_logger(lg)
+# global_logger(lg)
 
 optimiser=ConvexRule(
     Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
@@ -91,6 +92,7 @@ nn = MultitargetNeuralNetworkRegressor(;
     optimiser=optimiser,
     acceleration=CUDALibs(),
     batch_size=get_config(lg, "batch_size"),
+    lambda=get_config(lg, "lambda"),
 )
 
 # Constrols
@@ -103,27 +105,34 @@ nn = MultitargetNeuralNetworkRegressor(;
 # end
 
 function update_loss(loss)
-    @info "metrics" loss=loss
+    # @info "metrics" loss=loss
+    Wandb.log(lg, Dict("metrics/loss" => loss))
     # push!(losses, loss)
     return nothing
 end
 
 function update_training_loss(report)
-    @info "metrics" training_loss=report.training_losses[end]
+    # @info "metrics" training_loss=report.training_losses[end]
+    Wandb.log(lg, Dict("metrics/training_loss" => report.training_losses[end]))
     # push!(training_losses,
     #       report.training_losses[end]
     # )
     return nothing
 end
 
-update_epochs(epoch) = @info "log" epoch=epoch # push!(epochs, epoch)
+function update_epochs(epoch)
+    # @info "log" epoch=epoch
+    Wandb.log(lg, Dict("log/epoch" => epoch)) 
+    # push!(epochs, epoch)
+    return nothing
+end
 
 controls=[Step(1),
     # NumberSinceBest(20),
-    PQ(),
-    GL(; alpha=2.0),
+    # PQ(; alpha=0.9, k=30),
+    GL(; alpha=20.0),
     InvalidValue(),
-    TimeLimit(; t=5/60),
+    TimeLimit(; t=1),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
