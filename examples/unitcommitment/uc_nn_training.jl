@@ -132,7 +132,7 @@ controls=[Step(1),
     # PQ(; alpha=0.9, k=30),
     GL(; alpha=200.0),
     InvalidValue(),
-    TimeLimit(; t=1),
+    TimeLimit(; t=24),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
