@@ -185,7 +185,7 @@ function generate_dataset_pglib(
         [network_data["load"]["$l"]["pd"] for l in 1:num_loads],
         [network_data["load"]["$l"]["qd"] for l in 1:num_loads],
     )
-    p = load_parameter_factory(model, 1:num_inputs; load_set=POI.Parameter.(original_load))
+    p = load_parameter_factory(model, 1:num_inputs; load_set=MOI.Parameter.(original_load))
 
     # Build model and Recorder
     file = joinpath(
@@ -250,7 +250,7 @@ function generate_worst_case_dataset_Nonconvex(
         [l["qd"] for l in values(network_data["load"])],
     )
     p = load_parameter_factory(
-        model, 1:(num_loads * 2); load_set=POI.Parameter.(original_load)
+        model, 1:(num_loads * 2); load_set=MOI.Parameter.(original_load)
     )
 
     # Define batch id

@@ -34,6 +34,11 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             optimizer_factory,
         )
 
+        # Test Build Primal
+        model = JuMP.Model()
+        parameters = problem_iterator.parameters(model)
+        problem_iterator.primal_builder!(model, parameters)
+
         # file_names
         batch_id = string(uuid1())
         file_input = joinpath(path, "test_$(batch_id)_input")
@@ -41,7 +46,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
         )
 
         # Solve all problems and record solutions
@@ -118,6 +123,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             options=NLoptOptions(; maxeval=10),
         )
 
+        # Test Build Primal
+        model, parameters = problem_iterator.primal_builder!()
+
         # file_names
         batch_id = string(uuid1())
         file_input = joinpath(path, "test_$(batch_id)_input")
@@ -125,7 +133,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
         )
 
         # Solve all problems and record solutions
