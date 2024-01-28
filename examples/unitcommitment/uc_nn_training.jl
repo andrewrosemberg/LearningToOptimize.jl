@@ -76,7 +76,7 @@ lg = WandbLogger(
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
         "rng" => 123,
-        "lambda" => 0.3,
+        "lambda" => 0.01,
     )
 )
 
