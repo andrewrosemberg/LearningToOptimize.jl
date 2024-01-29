@@ -127,6 +127,7 @@ function pm_primal_builder!(
                 set_dual_variable!(recorder, real_balance)
             end
         end
+        set_model!(recorder)
         return model, parameters, variable_refs
     end
 
@@ -191,7 +192,7 @@ function generate_dataset_pglib(
     file = joinpath(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
-    recorder = Recorder{filetype}(file; filterfn=filterfn)
+    recorder = Recorder{filetype}(file; filterfn=filterfn,model=model)
     pm_primal_builder!(
         model, p, network_data, network_formulation; recorder=recorder, record_duals=true
     )
@@ -265,7 +266,7 @@ function generate_worst_case_dataset_Nonconvex(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=model
     )
 
     # Build model
@@ -372,7 +373,7 @@ function generate_worst_case_dataset(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=JuMP.Model() # dummy model
     )
 
     # Solve all problems and record solutions

@@ -88,6 +88,16 @@ function set_dual_variable!(recorder::Recorder, p::Vector)
     return recorder.dual_variables = p
 end
 
+function set_model!(recorder::Recorder)
+    recorder.model= if length(recorder.primal_variables) > 0
+        owner_model(recorder.primal_variables[1])
+    elseif length(recorder.dual_variables) > 0
+        owner_model(recorder.dual_variables[1])
+    else
+        @error("No model provided")
+    end
+end
+
 abstract type AbstractProblemIterator end
 
 """

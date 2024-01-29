@@ -19,6 +19,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             if !isnothing(recorder)
                 set_primal_variable!(recorder, [x])
                 set_dual_variable!(recorder, [cons])
+                set_model!(recorder)
             end
         end
         function set_iterator!(model, parameters, idx)
@@ -36,6 +37,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # Test Build Primal
         model = JuMP.Model()
+        set_optimizer(model, problem_iterator.optimizer())
         parameters = problem_iterator.parameters(model)
         problem_iterator.primal_builder!(model, parameters)
 
@@ -102,6 +104,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             if !isnothing(recorder)
                 set_primal_variable!(recorder, [x])
                 set_dual_variable!(recorder, [cons])
+                set_model!(recorder)
             end
 
             return model, [parameters]
