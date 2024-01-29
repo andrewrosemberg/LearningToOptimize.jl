@@ -161,6 +161,8 @@ controls=[Step(2),
 #     d_term = Flux.mse(gradient( ( _x ) -> sum(layer( _x )), x), y[:, 2:end])
 #     return o_term + d_term * 0.1
 # end
+# layer = mach.fitresult.fitresult[1]
+# gradient( ( _x ) -> sum(layer( _x )), X')
 
 iterated_pipe =
     IteratedModel(model=nn,

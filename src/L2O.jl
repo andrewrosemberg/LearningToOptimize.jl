@@ -33,7 +33,9 @@ export ArrowFile,
     FullyConnectedBuilder,
     make_convex!,
     make_convex,
-    ConvexRule
+    ConvexRule,
+    relative_rmse,
+    relative_mae
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
@@ -42,5 +44,6 @@ include("worst_case.jl")
 include("worst_case_iter.jl")
 include("FullyConnected.jl")
 include("nn_expression.jl")
+include("metrics.jl")
 
 end
