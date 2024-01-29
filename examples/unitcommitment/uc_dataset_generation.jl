@@ -30,6 +30,7 @@ horizon = parse(Int, ARGS[5]) # horizon=2
 save_file = case_name * "_" * replace(date, "-" => "_") * "_h" * string(horizon)
 num_batches = parse(Int, ARGS[6]) # num_batches=10
 solve_nominal = parse(Bool, ARGS[7]) # solve_nominal=true
+num_random = parse(Int, ARGS[8]) # num_random=100
 data_dir = joinpath(data_dir, case_name, date, "h" * string(horizon))
 mkpath(joinpath(data_dir, "input"))
 mkpath(joinpath(data_dir, "output"))
@@ -51,7 +52,9 @@ instance.time = horizon
 if solve_nominal
     model = build_model_uc(instance)
     uc_bnb_dataset(instance, save_file; data_dir=data_dir, model=model)
-    uc_random_dataset!(instance, save_file; data_dir=data_dir, model=model)
+    if num_random > 0
+        uc_random_dataset!(instance, save_file; data_dir=data_dir, model=model, num_s=num_random)
+    end
 end
 
 # save nominal loads in a dictionary
@@ -74,7 +77,9 @@ end
     @info "Solving batch $i" rng perturbed_loads_sum
     model = build_model_uc(instance_)
     uc_bnb_dataset(instance_, save_file; data_dir=data_dir, model=model)
-    uc_random_dataset!(instance_, save_file; data_dir=data_dir, model=model)
+    if num_random > 0
+        uc_random_dataset!(instance_, save_file; data_dir=data_dir, model=model, num_s=num_random)
+    end
 end
 
 include(joinpath(dirname(@__FILE__), "compress_arrow.jl"))
