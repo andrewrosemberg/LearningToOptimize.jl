@@ -80,19 +80,9 @@ lg = WandbLogger(
     )
 )
 
-# global_logger(lg)
-
 optimiser=ConvexRule(
     Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
 )
-
-function relative_rmse(ŷ, y)
-    return sqrt(mean(((ŷ .- y) ./ y) .^ 2))
-end
-
-function relative_mae(ŷ, y)
-    return mean(abs.((ŷ .- y) ./ y))
-end
 
 nn = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder(get_config(lg, "layers")),
@@ -107,33 +97,18 @@ nn = MultitargetNeuralNetworkRegressor(;
 
 # Constrols
 
-# clear() = begin
-#     global losses = []
-#     global training_losses = []
-#     global epochs = []
-#     return nothing
-# end
-
 function update_loss(loss)
-    # @info "metrics" loss=loss
     Wandb.log(lg, Dict("metrics/loss" => loss))
-    # push!(losses, loss)
     return nothing
 end
 
 function update_training_loss(report)
-    # @info "metrics" training_loss=report.training_losses[end]
     Wandb.log(lg, Dict("metrics/training_loss" => report.training_losses[end]))
-    # push!(training_losses,
-    #       report.training_losses[end]
-    # )
     return nothing
 end
 
 function update_epochs(epoch)
-    # @info "log" epoch=epoch
     Wandb.log(lg, Dict("log/epoch" => epoch)) 
-    # push!(epochs, epoch)
     return nothing
 end
 
@@ -180,4 +155,4 @@ fit!(mach; verbosity=2)
 close(lg)
 
 # Save model
-MLJ.save(joinpath(model_dir, save_file * ".jls"), mach)
+MLJ.save(joinpath(model_dir, save_file * ".jlso"), mach)
