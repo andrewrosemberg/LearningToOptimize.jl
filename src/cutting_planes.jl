@@ -115,7 +115,13 @@ function delete_binary_terms!(m::JuMP.Model; delete_objective=true)
     return
 end
 
-function add_deficit_constraints!(model::JuMP.Model; penalty=1e7)
+function add_deficit_constraints!(model::JuMP.Model; penalty=nothing)
+    if isnothing(penalty)
+        obj = objective_function(model)
+        # get the highest coefficient
+        penalty = maximum(abs.(values(obj.terms)))
+        penalty = penalty * 1.1
+    end
     consrefs = [con for con in all_constraints(model, include_variable_in_set_constraints=false)]
     @variable(model, deficit[1:length(consrefs)])
     @variable(model, norm_deficit)
