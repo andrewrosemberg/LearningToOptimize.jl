@@ -137,12 +137,19 @@ function update_epochs(epoch)
     return nothing
 end
 
-controls=[Step(1),
-    # NumberSinceBest(20),
+model_dir = joinpath(dirname(@__FILE__), "models")
+mkpath(model_dir)
+
+save_control =
+    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=3)
+
+controls=[Step(2),
+    NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
-    GL(; alpha=200.0),
+    GL(; alpha=4.0),
     InvalidValue(),
-    TimeLimit(; t=24),
+    TimeLimit(; t=1),
+    save_control,
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
