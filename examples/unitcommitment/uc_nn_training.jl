@@ -72,11 +72,11 @@ lg = WandbLogger(
     name = "$(case_name)-$(date)-h$(horizon)-$(now())",
     config = Dict(
         "layers" => [1024, 512, 64], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
-        "batch_size" => 24,
+        "batch_size" => 32,
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
         "rng" => 123,
-        "lambda" => 0.01,
+        # "lambda" => 0.00,
     )
 )
 
@@ -101,7 +101,7 @@ nn = MultitargetNeuralNetworkRegressor(;
     optimiser=optimiser,
     acceleration=CUDALibs(),
     batch_size=get_config(lg, "batch_size"),
-    lambda=get_config(lg, "lambda"),
+    # lambda=get_config(lg, "lambda"),
     loss=relative_rmse,
 )
 
