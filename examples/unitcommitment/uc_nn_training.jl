@@ -176,3 +176,6 @@ fit!(mach; verbosity=2)
 
 # Finish the run
 close(lg)
+
+# Save model
+MLJ.save(joinpath(model_dir, save_file * ".jls"), mach)
