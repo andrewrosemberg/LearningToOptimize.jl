@@ -68,11 +68,12 @@ X = Float32.(Matrix(train_table[!, input_features]))
 y = Float32.(Matrix(train_table[!, [:objective]]))
 
 # Define model and logger
+layers = [1024, 512, 64] # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
 lg = WandbLogger(
     project = "unit_commitment_proxies",
     name = "$(case_name)-$(date)-h$(horizon)-$(now())",
     config = Dict(
-        "layers" => [1024, 512, 64], # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
+        "layers" => layers,
         "batch_size" => 32,
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
@@ -86,7 +87,7 @@ optimiser=ConvexRule(
 )
 
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder(get_config(lg, "layers")),
+    builder=FullyConnectedBuilder(layers),
     rng=get_config(lg, "rng"),
     epochs=5000,
     optimiser=optimiser,
@@ -151,4 +152,4 @@ fitted_model = mach.fitresult.fitresult[1]
 
 model_state = Flux.state(fitted_model)
 
-jldsave(joinpath(model_dir, save_file * ".jld2"); model_state=model_state, layers=get_config(lg, "layers"), input_features=input_features)
+jldsave(joinpath(model_dir, save_file * ".jld2"); model_state=model_state, layers=layers, input_features=input_features)
