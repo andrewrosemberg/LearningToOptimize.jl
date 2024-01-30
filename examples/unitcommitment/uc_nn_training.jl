@@ -20,6 +20,7 @@ using Wandb, Dates, Logging
 using Statistics
 
 include(joinpath(dirname(@__FILE__), "bnb_dataset.jl"))
+include(joinpath(dirname(@__FILE__), "training_utils.jl"))
 
 include(joinpath(dirname(dirname(@__DIR__)), "src/cutting_planes.jl"))
 
@@ -97,21 +98,6 @@ nn = MultitargetNeuralNetworkRegressor(;
 
 # Constrols
 
-function update_loss(loss)
-    Wandb.log(lg, Dict("metrics/loss" => loss))
-    return nothing
-end
-
-function update_training_loss(report)
-    Wandb.log(lg, Dict("metrics/training_loss" => report.training_losses[end]))
-    return nothing
-end
-
-function update_epochs(epoch)
-    Wandb.log(lg, Dict("log/epoch" => epoch)) 
-    return nothing
-end
-
 model_dir = joinpath(dirname(@__FILE__), "models")
 mkpath(model_dir)
 
@@ -155,4 +141,14 @@ fit!(mach; verbosity=2)
 close(lg)
 
 # Save model
-MLJ.save(joinpath(model_dir, save_file * ".jlso"), mach)
+# MLJ.save(joinpath(model_dir, save_file * ".jlso"), mach)
+
+using JLD2
+
+mach = mach |> cpu
+
+fitted_model = mach.fitresult.fitresult[1]
+
+model_state = Flux.state(fitted_model)
+
+jldsave(joinpath(model_dir, save_file * ".jld2"); model_state)

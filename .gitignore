@@ -17,3 +17,4 @@ examples/unitcommitment/wandb/*
 *.png
 *.jls
 *.jlso
+*.jld2
