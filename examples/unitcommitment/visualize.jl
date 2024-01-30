@@ -1,6 +1,10 @@
 using Plots
 using Arrow
 using DataFrames
+using Statistics
+using LinearAlgebra
+
+cossim(x,y) = dot(x,y) / (norm(x)*norm(y))
 
 # Data Parameters
 case_name = "case300"
@@ -11,15 +15,19 @@ case_file_path = joinpath(path_dataset, case_name, date, "h"*horizon)
 
 # Load input and output data tables
 file_ins = readdir(joinpath(case_file_path, "input"), join=true)
+batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 file_outs = readdir(joinpath(case_file_path, "output"), join=true)
+file_outs = [file_outs[findfirst(x -> occursin(batch_id, x), file_outs)] for batch_id in batch_ids]
 
 # Load input and output data tables
 input_tables = Array{DataFrame}(undef, length(file_ins))
 output_tables = Array{DataFrame}(undef, length(file_outs))
-for (i, file) in enumerate(file_ins)
+for i in 1:length(file_ins)
+    file = file_ins[i]
     input_tables[i] = Arrow.Table(file) |> DataFrame
 end
-for (i, file) in enumerate(file_outs)
+for i in 1:length(file_outs)
+    file = file_outs[i]
     output_tables[i] = Arrow.Table(file) |> DataFrame
     # if all the status are OPTIMAL, make them INFEASIBLE
     if all(output_tables[i].status .== "OPTIMAL")
@@ -27,13 +35,24 @@ for (i, file) in enumerate(file_outs)
     end
 end
 
+# Nominal Loads
+load_columns = [col for col in names(input_tables[1]) if occursin("load", col)]
+nominal_loads = Vector(input_tables[1][1, load_columns])
+
+# Load divergence
+cos_sim = [acos(cossim(nominal_loads, Vector(input_table[1, load_columns]))) for input_table in input_tables]
+norm_sim = [norm(nominal_loads) - norm(Vector(input_table[1, load_columns])) for input_table in input_tables] ./ norm(nominal_loads) .+ 1
+
+# Polar Plot divergence
+plotly()
+plt = plot(cos_sim, norm_sim, title="Load Similarity", proj = :polar, m = 2)
+
 # concatenate all the input and output tables
 input_table = vcat(input_tables...)
 output_table = vcat(output_tables...)
 
 # sum each row of the input table (excluding the id) and store it in a new column
 commit_columns = [col for col in names(input_table) if !occursin("load", col) && !occursin("id", col)]
-load_columns = [col for col in names(input_table) if occursin("load", col)]
 input_table.total_commitment = sum(eachcol(input_table[!, commit_columns]))
 input_table.total_load = sum(eachcol(input_table[!, load_columns]))
 
