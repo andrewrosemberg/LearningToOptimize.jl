@@ -8,6 +8,7 @@ using UUIDs
 import ParametricOptInterface as POI
 import JuMP.MOI as MOI
 import Base: string
+using Statistics
 
 using Nonconvex
 using Zygote

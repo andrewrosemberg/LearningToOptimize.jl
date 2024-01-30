@@ -1,16 +1,7 @@
-authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
 name = "L2O"
 uuid = "e1d8bfa7-c465-446a-84b9-451470f6e76c"
+authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
 version = "1.2.0-DEV"
-
-[compat]
-Arrow = "2"
-CSV = "0.10"
-Dualization = "0.5"
-JuMP = "1"
-ParametricOptInterface = "0.7"
-Zygote = "^0.6.68"
-julia = "1.6"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
@@ -25,8 +16,18 @@ Nonconvex = "01bcebdf-4d21-426d-b5c4-6132c1619978"
 Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 ParametricOptInterface = "0ce4ce61-57bf-432b-a095-efac525d185e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[compat]
+Arrow = "2"
+CSV = "0.10"
+Dualization = "0.5"
+JuMP = "1"
+ParametricOptInterface = "0.7"
+Zygote = "^0.6.68"
+julia = "1.6"
 
 [extras]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
