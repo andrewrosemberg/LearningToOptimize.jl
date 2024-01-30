@@ -13,6 +13,8 @@ using L2O
 # using CUDA
 # using Wandb
 using DataFrames
+using JLD2
+using Arrow
 
 # include(joinpath(pwd(), "examples", "unitcommitment", "training_utils.jl"))
 include(joinpath(pwd(), "examples", "unitcommitment", "bnb_dataset.jl"))
@@ -32,7 +34,6 @@ case_file_path = joinpath(data_file_path, case_name, date, "h"*string(horizon))
 ##############
 # Load Model
 ##############
-
 # mach = machine(joinpath(model_dir, save_file * ".jlso"))
 
 model_state = JLD2.load(joinpath(model_dir, save_file * ".jld2"), "model_state")
@@ -73,16 +74,21 @@ for i in 1:length(instance.buses)
     end
 end
 
+# build model
 model = build_model_uc(instance)
 bin_vars, bin_vars_names = bin_variables_retriever(model)
-load_inputs = [
 
-flux_model = FullyConnected(
+##############
+# Build DNN
+##############
+
+input_size = size(input_table, 2) - 1
+flux_model = FullyConnected(input_size, [1024, 512, 64], 1)
+Float64(relative_mae(flux_model(X'), y'))
+
 
 # Remove binary constraints
 upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(model)
-
-predict_mode(mach, rand(1428)')
 
 ##############
 # Solve using DNN approximator

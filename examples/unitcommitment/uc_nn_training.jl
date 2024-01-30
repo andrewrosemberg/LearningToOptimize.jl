@@ -63,8 +63,8 @@ output_table = vcat(output_tables...)
 
 # Separate input and output variables & ignore id time status primal_status dual_status
 train_table = innerjoin(input_table, output_table[!, [:id, :objective]]; on=:id)
-input_features = train_table[!, Not([:id, :objective])]
-X = Float32.(Matrix(input_features))
+input_features = names(train_table[!, Not([:id, :objective])])
+X = Float32.(Matrix(train_table[!, input_features]))
 y = Float32.(Matrix(train_table[!, [:objective]]))
 
 # Define model and logger
@@ -151,4 +151,4 @@ fitted_model = mach.fitresult.fitresult[1]
 
 model_state = Flux.state(fitted_model)
 
-jldsave(joinpath(model_dir, save_file * ".jld2"); model_state)
+jldsave(joinpath(model_dir, save_file * ".jld2"); model_state=model_state, layers=get_config(lg, "layers"), input_features=input_features)
