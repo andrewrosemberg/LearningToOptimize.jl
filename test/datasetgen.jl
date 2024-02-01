@@ -9,7 +9,7 @@ function test_problem_iterator(path::AbstractString)
         # The problem to iterate over
         model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
         @variable(model, x)
-        p = @variable(model, _p in POI.Parameter(1.0))
+        p = @variable(model, _p in MOI.Parameter(1.0))
         @constraint(model, cons, x + _p >= 3)
         @objective(model, Min, 2x)
 

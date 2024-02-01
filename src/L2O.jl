@@ -8,6 +8,7 @@ using UUIDs
 import ParametricOptInterface as POI
 import JuMP.MOI as MOI
 import Base: string
+using Statistics
 
 using Nonconvex
 using Zygote
@@ -17,6 +18,7 @@ using Flux
 using Flux: @functor
 using Random
 import MLJFlux.train!
+using Optimisers
 
 export ArrowFile,
     CSVFile,
@@ -27,11 +29,14 @@ export ArrowFile,
     WorstCaseProblemIterator,
     set_primal_variable!,
     set_dual_variable!,
+    set_model!,
     FullyConnected,
     FullyConnectedBuilder,
     make_convex!,
     make_convex,
-    ConvexRule
+    ConvexRule,
+    relative_rmse,
+    relative_mae
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
@@ -39,5 +44,7 @@ include("arrowrecorder.jl")
 include("worst_case.jl")
 include("worst_case_iter.jl")
 include("FullyConnected.jl")
+include("nn_expression.jl")
+include("metrics.jl")
 
 end

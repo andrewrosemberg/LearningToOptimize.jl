@@ -127,6 +127,7 @@ function pm_primal_builder!(
                 set_dual_variable!(recorder, real_balance)
             end
         end
+        set_model!(recorder)
         return model, parameters, variable_refs
     end
 
@@ -185,13 +186,13 @@ function generate_dataset_pglib(
         [network_data["load"]["$l"]["pd"] for l in 1:num_loads],
         [network_data["load"]["$l"]["qd"] for l in 1:num_loads],
     )
-    p = load_parameter_factory(model, 1:num_inputs; load_set=POI.Parameter.(original_load))
+    p = load_parameter_factory(model, 1:num_inputs; load_set=MOI.Parameter.(original_load))
 
     # Build model and Recorder
     file = joinpath(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
-    recorder = Recorder{filetype}(file; filterfn=filterfn)
+    recorder = Recorder{filetype}(file; filterfn=filterfn,model=model)
     pm_primal_builder!(
         model, p, network_data, network_formulation; recorder=recorder, record_duals=true
     )
@@ -250,7 +251,7 @@ function generate_worst_case_dataset_Nonconvex(
         [l["qd"] for l in values(network_data["load"])],
     )
     p = load_parameter_factory(
-        model, 1:(num_loads * 2); load_set=POI.Parameter.(original_load)
+        model, 1:(num_loads * 2); load_set=MOI.Parameter.(original_load)
     )
 
     # Define batch id
@@ -265,7 +266,7 @@ function generate_worst_case_dataset_Nonconvex(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=model
     )
 
     # Build model
@@ -372,7 +373,7 @@ function generate_worst_case_dataset(
         data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=JuMP.Model() # dummy model
     )
 
     # Solve all problems and record solutions

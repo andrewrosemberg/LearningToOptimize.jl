@@ -19,6 +19,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             if !isnothing(recorder)
                 set_primal_variable!(recorder, [x])
                 set_dual_variable!(recorder, [cons])
+                set_model!(recorder)
             end
         end
         function set_iterator!(model, parameters, idx)
@@ -34,6 +35,12 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             optimizer_factory,
         )
 
+        # Test Build Primal
+        model = JuMP.Model()
+        set_optimizer(model, problem_iterator.optimizer())
+        parameters = problem_iterator.parameters(model)
+        problem_iterator.primal_builder!(model, parameters)
+
         # file_names
         batch_id = string(uuid1())
         file_input = joinpath(path, "test_$(batch_id)_input")
@@ -41,7 +48,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
         )
 
         # Solve all problems and record solutions
@@ -89,7 +96,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
                                                                    [CSVFile, ArrowFile]
         function _primal_builder!(; recorder=nothing)
             model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
-            parameters = @variable(model, _p in POI.Parameter(1.0))
+            parameters = @variable(model, _p in MOI.Parameter(1.0))
             @variable(model, x)
             @constraint(model, cons, x + parameters >= 3)
             @objective(model, Min, 2x)
@@ -97,6 +104,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             if !isnothing(recorder)
                 set_primal_variable!(recorder, [x])
                 set_dual_variable!(recorder, [cons])
+                set_model!(recorder)
             end
 
             return model, [parameters]
@@ -118,6 +126,9 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             options=NLoptOptions(; maxeval=10),
         )
 
+        # Test Build Primal
+        model, parameters = problem_iterator.primal_builder!()
+
         # file_names
         batch_id = string(uuid1())
         file_input = joinpath(path, "test_$(batch_id)_input")
@@ -125,7 +136,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[], dual_variables=[]
+            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
         )
 
         # Solve all problems and record solutions

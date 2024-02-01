@@ -12,13 +12,7 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
 
     _filename = _filename * "_$(string(id))." * string(ArrowFile)
 
-    model = if length(recorder.primal_variables) > 0
-        owner_model(recorder.primal_variables[1])
-    elseif length(recorder.dual_variables) > 0
-        owner_model(recorder.dual_variables[1])
-    else
-        @error("Recorder has no variables")
-    end
+    model = recorder.model
 
     df = (;
         id=[id],

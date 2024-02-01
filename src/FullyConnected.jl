@@ -47,7 +47,7 @@ function FullyConnected(
     # Create the output layer connected to the last hidden layer
     push!(layers, Dense(hidden_sizes[end] + 1, output_size; init=init))
 
-    return FullyConnected(PairwiseFusion(vcat, layers...), pass_through)
+    return FullyConnected(PairwiseFusion(vcat, layers...), pass_through) |> gpu
 end
 
 mutable struct FullyConnectedBuilder <: MLJFlux.Builder
@@ -56,7 +56,7 @@ end
 
 function MLJFlux.build(builder::FullyConnectedBuilder, rng, n_in, n_out)
     init = Flux.glorot_uniform(rng)
-    return Chain(FullyConnected(n_in, builder.hidden_sizes, n_out; init=init))
+    return Chain(FullyConnected(n_in, builder.hidden_sizes, n_out; init=init)) |> gpu
 end
 
 # mutable struct ConvexRegressor <: MLJFlux.MLJFluxDeterministic
@@ -116,4 +116,22 @@ function MLJFlux.train!(
         make_convex!(chain)
     end
     return training_loss / n_batches
+end
+
+function train!(model, loss, opt_state, X, Y; batchsize=32, shuffle=true)
+    X = X |> gpu
+    Y = Y |> gpu
+    data = Flux.DataLoader((X, Y), 
+        batchsize=batchsize, shuffle=shuffle
+    )
+    for d in data
+		∇model, _ = gradient(model, d...) do m, x, y  # calculate the gradients
+			loss(m(x), y)
+		end;
+		# insert what ever code you want here that needs gradient
+		# E.g. logging with TensorBoardLogger.jl as histogram so you can see if it is becoming huge
+		opt_state, model = Optimisers.update(opt_state, model, ∇model)
+		# Here you might like to check validation set accuracy, and break out to do early stopping
+	end
+    return loss(model(X), Y)
 end

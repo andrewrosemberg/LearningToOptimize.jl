@@ -8,3 +8,13 @@ Manifest.toml
 *.arrow
 *.m
 *.csv
+.DS_Store
+*.out
+*.sbatch
+examples/unitcommitment/app/*
+*.edu
+examples/unitcommitment/wandb/*
+*.png
+*.jls
+*.jlso
+*.jld2
