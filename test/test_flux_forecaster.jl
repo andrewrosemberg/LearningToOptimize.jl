@@ -38,3 +38,20 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
         rm(file_out)
     end
 end
+
+# Test the Flux.jl forecaster outside MLJ.jl
+function test_fully_connected(;num_samples::Int=100, num_features::Int=10)
+    X = rand(num_features, num_samples)
+    y = rand(1, num_samples)
+
+    model = FullyConnected(10, [10, 10], 1)
+
+    # Train the model
+    optimizer = Optimisers.Adam()
+    opt_state = Optimisers.setup(optimizer, model)
+    L2O.train!(model, Flux.mse, opt_state, X, y)
+
+    # Make predictions
+    predictions = model(X)
+    @test predictions isa Array
+end
