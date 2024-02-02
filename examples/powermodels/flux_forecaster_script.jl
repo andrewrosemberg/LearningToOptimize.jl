@@ -4,6 +4,7 @@ TestEnv.activate()
 using Arrow
 using CSV
 using MLJFlux
+using MLUtils
 using Flux
 using MLJ
 using DataFrames
@@ -33,29 +34,28 @@ file_outs = [
 batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 
 # Load input and output data tables
-train_idx = collect(1:floor(Int, length(file_ins) * 0.5))
-test_idx = setdiff(1:length(file_ins), train_idx)
-
 if filetype === ArrowFile
-    input_table_train = Arrow.Table(file_ins[train_idx])
-    output_table_train = Arrow.Table(file_outs[train_idx])
-
-    input_table_test = Arrow.Table(file_ins[test_idx])
-    output_table_test = Arrow.Table(file_outs[test_idx])
+    input_table_train = Arrow.Table(file_ins)
+    output_table_train = Arrow.Table(file_outs)
 else
     input_table_train = CSV.read(file_ins[train_idx], DataFrame)
     output_table_train = CSV.read(file_outs[train_idx], DataFrame)
-
-    input_table_test = CSV.read(file_ins[test_idx], DataFrame)
-    output_table_test = CSV.read(file_outs[test_idx], DataFrame)
 end
 
 # Convert to dataframes
-input_data_train = DataFrame(input_table_train)
-output_data_train = DataFrame(output_table_train)
+input_data = DataFrame(input_table_train)
+output_data = DataFrame(output_table_train)
 
-input_data_test = DataFrame(input_table_test)
-output_data_test = DataFrame(output_table_test)
+train_idx, test_idx = splitobs(1:size(input_data, 1), at=(0.7), shuffle=true)
+
+input_data_train = input_data[train_idx, :]
+output_data_train = output_data[train_idx, :]
+
+input_data_test = input_data[test_idx, :]
+output_data_test = output_data[test_idx, :]
+
+using Gurobi
+inhull = inconvexhull(Matrix(input_data_train[1:10000, Not(:id)]), Matrix(input_data_test[1:1, Not(:id)]), Gurobi.Optimizer)
 
 # Separate input and output variables
 output_variables_train = output_data_train[!, Not(:id)]

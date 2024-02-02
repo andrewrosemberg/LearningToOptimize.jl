@@ -9,9 +9,9 @@ function test_inconvexhull()
         training_set = [0. 0; 1 0; 0 1; 1 1]
         
         # Create the test set
-        test_set = [0.5 0.5; -0.5 0.5; 0.5 -0.5; 0.0 0.5]
+        test_set = [0.5 0.5; -0.5 0.5; 0.5 -0.5; 0.0 0.5; 2.0 0.5]
         
         # Test the inconvexhull function
-        @test inconvexhull(training_set, test_set, HiGHS.Optimizer) == [true, false, false, true]
+        @test inconvexhull(training_set, test_set, HiGHS.Optimizer) == [true, false, false, true, false]
     end
 end

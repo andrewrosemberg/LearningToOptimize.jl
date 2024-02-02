@@ -17,10 +17,10 @@ function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, 
     @constraint(model, convex_combination[i=1:m], sum(lambda[j, i] for j in 1:n) == 1)
     
     # slack variables
-    @variable(model, slack[1:m] >= 0)
+    @variable(model, slack[1:m])
 
     # Create the constraints
-    @constraint(model, in_convex_hull[i=1:m, k=1:d], sum(lambda[j, i] * training_set[j, k] for j in 1:n) == test_set[i, k] + slack[i])
+    @constraint(model, in_convex_hull[i=1:m], [slack[i]; [sum(lambda[j, i] * training_set[j, k] for j in 1:n) - test_set[i, k] for k in 1:d]] in MOI.NormOneCone(d + 1))
 
     # Create the objective
     @objective(model, Min, sum(slack[i] for i in 1:m))
