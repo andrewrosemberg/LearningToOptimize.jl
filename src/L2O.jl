@@ -36,7 +36,8 @@ export ArrowFile,
     make_convex,
     ConvexRule,
     relative_rmse,
-    relative_mae
+    relative_mae,
+    inconvexhull
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
@@ -46,5 +47,6 @@ include("worst_case_iter.jl")
 include("FullyConnected.jl")
 include("nn_expression.jl")
 include("metrics.jl")
+include("inconvexhull.jl")
 
 end

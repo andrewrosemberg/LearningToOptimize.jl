@@ -118,7 +118,8 @@ function MLJFlux.train!(
     return training_loss / n_batches
 end
 
-function train!(model, loss, opt_state, X, Y; batchsize=32, shuffle=true)
+function train!(model, loss, opt_state, X, Y; _batchsize=32, shuffle=true)
+    batchsize = min(size(X, 2), _batchsize)
     X = X |> gpu
     Y = Y |> gpu
     data = Flux.DataLoader((X, Y), 
