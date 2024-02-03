@@ -6,9 +6,6 @@ Pkg.activate(dirname(dirname(@__DIR__)))
 
 using Distributed
 using Random
-using Arrow
-using CSV
-using MLUtils
 
 ##############
 # Load Packages everywhere
@@ -20,6 +17,8 @@ using MLUtils
 @everywhere using DataFrames
 @everywhere using L2O
 @everywhere using Gurobi
+@everywhere using Arrow
+@everywhere using MLUtils
 
 # Paths
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
