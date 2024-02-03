@@ -1,6 +1,3 @@
-using TestEnv
-TestEnv.activate()
-
 using Arrow
 using CSV
 using MLJFlux
@@ -10,6 +7,7 @@ using MLJ
 using DataFrames
 using PowerModels
 using L2O
+using Random
 
 # Paths
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
@@ -46,13 +44,20 @@ end
 input_data = DataFrame(input_table_train)
 output_data = DataFrame(output_table_train)
 
+# Split the data into training and test sets
+# seed random number generator
+Random.seed!(123)
 train_idx, test_idx = splitobs(1:size(input_data, 1), at=(0.7), shuffle=true)
 
-input_data_train = input_data[train_idx, :]
-output_data_train = output_data[train_idx, :]
+# Separate input and output variables & ignore id time status primal_status dual_status
+joined_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
+train_table = joined_table[train_idx, :]
+test_table = joined_table[test_idx, :]
+input_features = names(joined_table[!, Not([:id, :operational_cost])])
 
-input_data_test = input_data[test_idx, :]
-output_data_test = output_data[test_idx, :]
+X = Float32.(Matrix(train_table[!, input_features]))
+y = Float32.(Matrix(train_table[!, :operational_cost]))
+
 
 using Gurobi
 inhull = inconvexhull(Matrix(input_data_train[!, Not(:id)]), Matrix(input_data_test[1:10, Not(:id)]), Gurobi.Optimizer)
