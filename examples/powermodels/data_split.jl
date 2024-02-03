@@ -1,6 +1,8 @@
 ####################################################
 ############## PowerModels Data Split ##############
 ####################################################
+import Pkg
+Pkg.activate(dirname(dirname(@__DIR__)))
 
 using Distributed
 using Random
