@@ -70,13 +70,13 @@ inhull = Array{Bool}(undef, length(test_idx))
     @info "Batch $i of $num_batches done"
 end
 
-# test_table.in_train_convex_hull = inhull
+test_table.in_train_convex_hull = inhull
 
-# # Save the training and test sets
-# if filetype === ArrowFile
-#     Arrow.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".arrow"), train_table)
-#     Arrow.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".arrow"), test_table)
-# else
-#     CSV.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".csv"), train_table)
-#     CSV.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".csv"), test_table)
-# end
+# Save the training and test sets
+if filetype === ArrowFile
+    Arrow.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".arrow"), train_table)
+    Arrow.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".arrow"), test_table)
+else
+    CSV.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".csv"), train_table)
+    CSV.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".csv"), test_table)
+end
