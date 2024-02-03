@@ -6,6 +6,7 @@ Pkg.activate(dirname(dirname(@__DIR__)))
 
 using Distributed
 using Random
+using ProgressMeter
 
 ##############
 # Load Packages everywhere
@@ -26,6 +27,9 @@ filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_input = joinpath(case_file_path, "input")
+
+mkpath(joinpath(case_file_path_input, "train"))
+mkpath(joinpath(case_file_path_input, "test"))
 
 # Load input and output data tables
 iter_files_in = readdir(joinpath(case_file_path_input))
@@ -57,8 +61,10 @@ batch_size = 50
 
 num_batches = ceil(Int, length(test_idx) / batch_size)
 
+@info "Computing if test points are in the convex hull of the training set" batch_size num_batches
+
 inhull = Array{Bool}(undef, length(test_idx))
-@sync @distributed for i in 1:num_batches
+@showprogress desc="Computing..." @distributed for i in 1:num_batches
     idx_range = (i-1)*batch_size+1:min(i*batch_size, length(test_idx))
     batch = test_table[idx_range, :]
     inhull[idx_range] = inconvexhull(Matrix(train_table[!, Not(:id)]), Matrix(batch[!, Not(:id)]), Gurobi.Optimizer)
@@ -67,12 +73,9 @@ end
 test_table.in_train_convex_hull = inhull
 
 # Save the training and test sets
-mkpath(joinpath(case_file_path_input, "train"))
-mkpath(joinpath(case_file_path_input, "test"))
-
 if filetype === ArrowFile
-    Arrow.write(Arrow.Table(train_table), joinpath(case_file_path_input, "train", case_name * "_train_input" * ".arrow"))
-    Arrow.write(Arrow.Table(test_table), joinpath(case_file_path_input, "test", case_name * "_test_input" * ".arrow"))
+    Arrow.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".arrow"), train_table)
+    Arrow.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".arrow"), test_table)
 else
     CSV.write(joinpath(case_file_path_input, "train", case_name * "_train_input" * ".csv"), train_table)
     CSV.write(joinpath(case_file_path_input, "test", case_name * "_test_input" * ".csv"), test_table)

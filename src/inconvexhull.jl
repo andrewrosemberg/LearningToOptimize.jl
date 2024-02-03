@@ -4,7 +4,7 @@
 
 Check if new points are inside the convex hull of the given points. Solves a linear programming problem to check if the points are inside the convex hull.
 """
-function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, solver)
+function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, solver; silent=true)
     # Get the number of points and dimensions
     n, d = size(training_set)
     m, d_ = size(test_set)
@@ -12,7 +12,10 @@ function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, 
     
     # Create the POI model
     model = JuMP.Model(() -> POI.Optimizer(solver()))
-    
+    if silent
+        set_attribute(model, MOI.Silent(), true)
+    end
+
     # Create the variables
     @variable(model, lambda[1:n] >= 0)
     @constraint(model, convex_combination, sum(lambda) == 1)
