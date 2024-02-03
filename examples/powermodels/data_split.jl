@@ -16,6 +16,7 @@ using MLUtils
 
 @everywhere import Pkg
 @everywhere Pkg.activate(dirname(dirname(@__DIR__)))
+@everywhere Pkg.instantiate()
 @everywhere using DataFrames
 @everywhere using L2O
 @everywhere using Gurobi
