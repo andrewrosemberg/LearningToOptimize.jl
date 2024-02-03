@@ -21,9 +21,8 @@ using MLUtils
 # Paths
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 filetype = ArrowFile # ArrowFile # CSVFile
-path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
+path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
-case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
 case_file_path_input = joinpath(case_file_path, "input")
 
 # Load input and output data tables
