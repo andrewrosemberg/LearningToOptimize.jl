@@ -55,7 +55,7 @@ input_data_test = input_data[test_idx, :]
 output_data_test = output_data[test_idx, :]
 
 using Gurobi
-inhull = inconvexhull(Matrix(input_data_train[1:10000, Not(:id)]), Matrix(input_data_test[1:1, Not(:id)]), Gurobi.Optimizer)
+inhull = inconvexhull(Matrix(input_data_train[!, Not(:id)]), Matrix(input_data_test[1:10, Not(:id)]), Gurobi.Optimizer)
 
 # Separate input and output variables
 output_variables_train = output_data_train[!, Not(:id)]
