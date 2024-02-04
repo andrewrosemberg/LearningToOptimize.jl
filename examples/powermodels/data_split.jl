@@ -20,7 +20,9 @@ using Random
 @everywhere using Arrow
 @everywhere using MLUtils
 
-# Paths
+##############
+# Parameters
+##############
 case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(dirname(@__FILE__), "data")
@@ -30,7 +32,9 @@ case_file_path_input = joinpath(case_file_path, "input")
 mkpath(joinpath(case_file_path_input, "train"))
 mkpath(joinpath(case_file_path_input, "test"))
 
-# Load input and output data tables
+##############
+# Load Data
+##############
 iter_files_in = readdir(joinpath(case_file_path_input))
 iter_files_in = filter(x -> occursin(string(filetype), x), iter_files_in)
 file_ins = [
@@ -48,8 +52,9 @@ end
 # Convert to dataframes
 input_data = DataFrame(input_table_train)
 
-# Split the data into training and test sets
-# seed random number generator
+##############
+# Split Data
+##############
 Random.seed!(123)
 train_idx, test_idx = splitobs(1:size(input_data, 1), at=(0.7), shuffle=true)
 
@@ -59,6 +64,10 @@ test_table = input_data[test_idx, :]
 batch_size = 10
 
 num_batches = ceil(Int, length(test_idx) / batch_size)
+
+##############
+# Check convex hull
+##############
 
 @info "Computing if test points are in the convex hull of the training set" batch_size num_batches
 
@@ -71,6 +80,10 @@ inhull = Array{Bool}(undef, length(test_idx))
 end
 
 test_table.in_train_convex_hull = inhull
+
+##############
+# Save files
+##############
 
 # Save the training and test sets
 if filetype === ArrowFile
