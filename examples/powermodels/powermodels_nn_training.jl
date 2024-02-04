@@ -8,11 +8,13 @@ using MLJFlux
 using MLUtils
 using Flux
 using MLJ
+using CUDA
 using DataFrames
 using PowerModels
 using L2O
 using Random
 using JLD2
+using Wandb, Dates, Logging
 
 ##############
 # Parameters
@@ -20,7 +22,7 @@ using JLD2
 case_name = ARGS[1] # pglib_opf_case300_ieee # pglib_opf_case5_pjm
 network_formulation = ARGS[2] # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
-path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
+path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
 case_file_path_input = joinpath(case_file_path, "input", "train")
@@ -56,7 +58,7 @@ output_data = DataFrame(output_table_train)
 # match
 train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
 
-input_features = names(joined_table[!, Not([:id, :operational_cost])])
+input_features = names(train_table[!, Not([:id, :operational_cost])])
 
 X = Float32.(Matrix(train_table[!, input_features]))
 y = Float32.(train_table[!, :operational_cost])
