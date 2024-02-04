@@ -22,7 +22,7 @@ include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl")) # include(".
 # Parameters
 ##############
 case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
-network_formulation = ARGS[2] # network_formulation=DCPPowerModel SOCWRConicPowerModel
+network_formulation = ARGS[2] # network_formulation=SOCWRConicPowerModel SOCWRConicPowerModel DCPPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
@@ -58,6 +58,9 @@ end
 input_data = DataFrame(input_table_train)
 output_data = DataFrame(output_table_train)
 
+# filter out rows with 0.0 operational_cost (i.e. inidicative of numerical issues)
+output_data = output_data[output_data.operational_cost .> 10, :]
+
 # match
 train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
 
@@ -71,7 +74,7 @@ y = Float32.(Matrix(train_table[!, [:operational_cost]]))
 ##############
 
 # Define model and logger
-layers = [1024, 512, 64] # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
+layers = [256, 64, 32]
 lg = WandbLogger(
     project = "powermodels-obj-proxies",
     name = "$(case_name)-$(now())",
@@ -81,6 +84,7 @@ lg = WandbLogger(
         "optimiser" => "ConvexRule",
         "learning_rate" => 0.01,
         "rng" => 123,
+        "network_formulation" => network_formulation,
         # "lambda" => 0.00,
     )
 )
@@ -106,7 +110,7 @@ model_dir = joinpath(dirname(@__FILE__), "models")
 mkpath(model_dir)
 
 save_control =
-    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=3)
+    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=100)
 
 controls=[Step(2),
     # NumberSinceBest(6),
