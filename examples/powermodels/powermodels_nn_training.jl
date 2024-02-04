@@ -16,7 +16,7 @@ using Random
 using JLD2
 using Wandb, Dates, Logging
 
-include(joinpath(dirname(dirname(@__FILE__), "training_utils.jl")))
+include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl"))
 
 ##############
 # Parameters
