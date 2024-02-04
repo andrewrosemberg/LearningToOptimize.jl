@@ -17,8 +17,8 @@ using JLD2
 ##############
 # Parameters
 ##############
-case_name = "pglib_opf_case300_ieee" # pglib_opf_case300_ieee # pglib_opf_case5_pjm
-network_formulation = DCPPowerModel # SOCWRConicPowerModel # DCPPowerModel
+case_name = ARGS[1] # pglib_opf_case300_ieee # pglib_opf_case5_pjm
+network_formulation = ARGS[2] # SOCWRConicPowerModel # DCPPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_file_path = joinpath(path_dataset, case_name)
@@ -68,7 +68,7 @@ y = Float32.(train_table[!, :operational_cost])
 # Define model and logger
 layers = [1024, 512, 64] # [1024, 300, 64, 32] , [1024, 1024, 300, 64, 32]
 lg = WandbLogger(
-    project = "unit_commitment_proxies",
+    project = "powermodels-obj-proxies",
     name = "$(case_name)-$(now())",
     config = Dict(
         "layers" => layers,
