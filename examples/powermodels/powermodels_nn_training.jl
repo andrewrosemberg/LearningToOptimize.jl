@@ -23,12 +23,18 @@ include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl")) # include(".
 ##############
 case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
 network_formulation = ARGS[2] # network_formulation=SOCWRConicPowerModel SOCWRConicPowerModel DCPPowerModel
+icnn = parse(Bool, ARGS[3]) # icnn=true # false
 filetype = ArrowFile # ArrowFile # CSVFile
+layers = [512, 256, 64] # [256, 64, 32]
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
 case_file_path_input = joinpath(case_file_path, "input", "train")
-save_file = "$(case_name)_$(network_formulation)_powermodels_nn"
+save_file = if icnn
+    "$(case_name)_$(network_formulation)_$(replace(string(layers), ", " => "_"))_icnn"
+else
+    "$(case_name)_$(network_formulation)_$(replace(string(layers), ", " => "_"))_dnn"
+end
 
 ##############
 # Load Data
@@ -74,10 +80,9 @@ y = Float32.(Matrix(train_table[!, [:operational_cost]]))
 ##############
 
 # Define model and logger
-layers = [256, 64, 32]
 lg = WandbLogger(
     project = "powermodels-obj-proxies",
-    name = "$(case_name)-$(now())",
+    name = "$(save_file)-$(now())",
     config = Dict(
         "layers" => layers,
         "batch_size" => 32,
@@ -89,9 +94,12 @@ lg = WandbLogger(
     )
 )
 
-optimiser=ConvexRule(
-    Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
-)
+optimiser= Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+if icnn
+    optimiser=ConvexRule(
+        Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+    )
+end
 
 nn = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder(layers),
@@ -110,7 +118,7 @@ model_dir = joinpath(dirname(@__FILE__), "models")
 mkpath(model_dir)
 
 save_control =
-    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=100)
+    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=1000)
 
 controls=[Step(2),
     # NumberSinceBest(6),
@@ -118,7 +126,7 @@ controls=[Step(2),
     # GL(; alpha=4.0),
     Threshold(0.003),
     InvalidValue(),
-    TimeLimit(; t=1),
+    TimeLimit(; t=12),
     save_control,
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
