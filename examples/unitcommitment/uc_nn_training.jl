@@ -20,7 +20,7 @@ using Wandb, Dates, Logging
 using Statistics
 
 include(joinpath(dirname(@__FILE__), "bnb_dataset.jl"))
-include(joinpath(dirname(@__FILE__), "training_utils.jl"))
+include(joinpath(dirname(dirname(@__FILE__), "training_utils.jl")))
 
 include(joinpath(dirname(dirname(@__DIR__)), "src/cutting_planes.jl"))
 

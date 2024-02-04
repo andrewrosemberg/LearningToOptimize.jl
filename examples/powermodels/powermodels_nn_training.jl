@@ -16,6 +16,8 @@ using Random
 using JLD2
 using Wandb, Dates, Logging
 
+include(joinpath(dirname(dirname(@__FILE__), "training_utils.jl")))
+
 ##############
 # Parameters
 ##############
@@ -26,6 +28,7 @@ path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
 case_file_path_input = joinpath(case_file_path, "input", "train")
+save_file = "$(case_name)_$(network_formulation)_powermodels_nn"
 
 ##############
 # Load Data

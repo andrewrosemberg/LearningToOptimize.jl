@@ -31,7 +31,7 @@ cache_dir="./examples/powermodels/data/"
 organization = "L2O"
 dataset = "pglib_opf_solves"
 case_name = "pglib_opf_case300_ieee"
-formulation = "DCPPowerModel" # ACPPowerModel SOCWRConicPowerModel
+formulation = "ACPPowerModel" # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 io_type = "input"
 download_dataset(organization, dataset, case_name, io_type; cache_dir=cache_dir)
 
