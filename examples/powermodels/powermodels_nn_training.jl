@@ -16,13 +16,13 @@ using Random
 using JLD2
 using Wandb, Dates, Logging
 
-include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl"))
+include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl")) # include("../training_utils.jl")
 
 ##############
 # Parameters
 ##############
-case_name = ARGS[1] # pglib_opf_case300_ieee # pglib_opf_case5_pjm
-network_formulation = ARGS[2] # SOCWRConicPowerModel # DCPPowerModel
+case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
+network_formulation = ARGS[2] # network_formulation=DCPPowerModel SOCWRConicPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
@@ -64,7 +64,7 @@ train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on
 input_features = names(train_table[!, Not([:id, :operational_cost])])
 
 X = Float32.(Matrix(train_table[!, input_features]))
-y = Float32.(train_table[!, :operational_cost])
+y = Float32.(Matrix(train_table[!, [:operational_cost]]))
 
 ##############
 # Fit DNN Approximator
@@ -99,7 +99,6 @@ nn = MultitargetNeuralNetworkRegressor(;
     # lambda=get_config(lg, "lambda"),
     loss=relative_rmse,
 )
-
 
 # Constrols
 
