@@ -66,7 +66,7 @@ batch_size = 10
 num_batches = ceil(Int, length(test_idx) / batch_size)
 
 ##############
-# Check convex hull
+# Check Convex-Hull
 ##############
 
 @info "Computing if test points are in the convex hull of the training set" batch_size num_batches
@@ -82,7 +82,7 @@ end
 test_table.in_train_convex_hull = inhull
 
 ##############
-# Save files
+# Save Files
 ##############
 
 # Save the training and test sets
