@@ -16,7 +16,7 @@ filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(pwd(), "examples", "powermodels", "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
-case_file_path_input = joinpath(case_file_path, "input")
+case_file_path_input = joinpath(case_file_path, "input", "train")
 
 # Load input and output data tables
 iter_files_in = readdir(joinpath(case_file_path_input))
@@ -29,7 +29,7 @@ iter_files_out = filter(x -> occursin(string(filetype), x), iter_files_out)
 file_outs = [
     joinpath(case_file_path_output, file) for file in iter_files_out if occursin("output", file)
 ]
-batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
+# batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 
 # Load input and output data tables
 if filetype === ArrowFile
@@ -46,40 +46,14 @@ output_data = DataFrame(output_table_train)
 
 # Split the data into training and test sets
 # seed random number generator
-Random.seed!(123)
-train_idx, test_idx = splitobs(1:size(input_data, 1), at=(0.7), shuffle=true)
 
 # Separate input and output variables & ignore id time status primal_status dual_status
-joined_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
-train_table = joined_table[train_idx, :]
-test_table = joined_table[test_idx, :]
+train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
+
 input_features = names(joined_table[!, Not([:id, :operational_cost])])
 
 X = Float32.(Matrix(train_table[!, input_features]))
-y = Float32.(Matrix(train_table[!, :operational_cost]))
-
-
-using Gurobi
-inhull = inconvexhull(Matrix(input_data_train[!, Not(:id)]), Matrix(input_data_test[1:10, Not(:id)]), Gurobi.Optimizer)
-
-# Separate input and output variables
-output_variables_train = output_data_train[!, Not(:id)]
-input_features_train = innerjoin(input_data_train, output_data_train[!, [:id]]; on=:id)[
-    !, Not(:id)
-] # just use success solves
-
-num_loads = floor(Int, size(input_features_train, 2) / 2)
-total_volume = [
-    sum(
-        sqrt(input_features_train[i, l]^2 + input_features_train[i, l + num_loads]^2) for
-        l in 1:num_loads
-    ) for i in 1:size(input_features_train, 1)
-]
-
-output_variables_test = output_data_test[!, Not(:id)]
-input_features_test = innerjoin(input_data_test, output_data_test[!, [:id]]; on=:id)[
-    !, Not(:id)
-] # just use success solves
+y = Float32.(train_table[!, :operational_cost])
 
 # Define model
 model = MultitargetNeuralNetworkRegressor(;
