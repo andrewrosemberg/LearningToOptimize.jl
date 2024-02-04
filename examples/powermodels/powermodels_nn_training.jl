@@ -109,9 +109,10 @@ save_control =
     MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=3)
 
 controls=[Step(2),
-    NumberSinceBest(6),
+    # NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
-    GL(; alpha=4.0),
+    # GL(; alpha=4.0),
+    Threshold(0.003),
     InvalidValue(),
     TimeLimit(; t=1),
     save_control,
