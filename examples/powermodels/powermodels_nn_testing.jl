@@ -70,12 +70,12 @@ models_list = filter(x -> occursin(string(network_formulation), x), models_list)
 flux_models = Array{Chain}(undef, length(models_list))
 layers = Array{Vector}(undef, length(models_list))
 type = Array{String}(undef, length(models_list))
-input_features = 0
+global input_features = 0
 for (i, model) in enumerate(models_list)
     type[i] = occursin("icnn", model) ? "ICNN" : "DNN"
     model_save = JLD2.load(joinpath(model_dir, model))
     model_state = model_save["model_state"]
-    input_features = model_save["input_features"]
+    global input_features = model_save["input_features"]
     layers[i] = model_save["layers"]
     input_size = length(input_features)
     flux_model = Chain(FullyConnected(input_size, layers[i], 1))
