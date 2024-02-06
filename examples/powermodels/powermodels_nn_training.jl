@@ -138,13 +138,14 @@ model_path = joinpath(model_dir, save_file * ".jld2")
 
 save_control = SaveBest(1000, model_path)
 
-controls=[Step(2),
+controls=[Step(1),
     # NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
     # GL(; alpha=4.0),
     Threshold(0.003),
     InvalidValue(),
-    TimeLimit(; t=12),
+    TimeLimit(; t=1),
+    save_control,
     WithModelLossDo(save_control),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
@@ -165,11 +166,13 @@ fit!(mach; verbosity=2)
 # Finish the run
 close(lg)
 
-# save model
-mach = mach |> cpu
+# save model if final loss is better than the best loss
+if IterationControl.loss(iterated_pipe) < save_control.best_loss
+    mach = mach |> cpu
 
-fitted_model = mach.fitresult.fitresult[1]
+    fitted_model = mach.fitresult.fitresult[1]
 
-model_state = Flux.state(fitted_model)
+    model_state = Flux.state(fitted_model)
 
-jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+    jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+end
