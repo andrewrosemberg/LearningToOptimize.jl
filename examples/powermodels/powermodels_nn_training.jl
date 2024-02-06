@@ -22,7 +22,7 @@ include(joinpath(dirname(dirname(@__FILE__)), "training_utils.jl")) # include(".
 # Parameters
 ##############
 case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
-network_formulation = ARGS[2] # network_formulation=SOCWRConicPowerModel SOCWRConicPowerModel DCPPowerModel
+network_formulation = ARGS[2] # network_formulation=ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 icnn = parse(Bool, ARGS[3]) # icnn=true # false
 filetype = ArrowFile # ArrowFile # CSVFile
 layers = [512, 256, 64] # [256, 64, 32]
@@ -117,8 +117,26 @@ nn = MultitargetNeuralNetworkRegressor(;
 model_dir = joinpath(dirname(@__FILE__), "models")
 mkpath(model_dir)
 
-save_control =
-    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=1000)
+# save_control =
+#     MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=1000)
+
+mutable struct SaveBest <: Function
+    best_loss::Float64
+    model_path::String
+end
+function (callback::SaveBest)(loss, mach)
+    if loss < callback.best_loss
+        callback.best_loss = loss
+        model = mach.fitresult.fitresult[1]
+        model_state = Flux.state(model)
+        jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+    end
+    return nothing
+end
+
+model_path = joinpath(model_dir, save_file * ".jld2")
+
+save_control = SaveBest(1000, model_path)
 
 controls=[Step(2),
     # NumberSinceBest(6),
@@ -127,7 +145,7 @@ controls=[Step(2),
     Threshold(0.003),
     InvalidValue(),
     TimeLimit(; t=12),
-    save_control,
+    WithModelLossDo(save_control),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
@@ -154,4 +172,4 @@ fitted_model = mach.fitresult.fitresult[1]
 
 model_state = Flux.state(fitted_model)
 
-jldsave(joinpath(model_dir, save_file * ".jld2"); model_state=model_state, layers=layers, input_features=input_features)
+jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
