@@ -15,7 +15,7 @@ end
 
 using Distributed, ClusterManagers
 
-np = 200 #
+np = 50 #
 addprocs(SlurmManager(np), job_file_loc = ARGS[1]) #cpus_per_task=24, mem_per_cpu=24, partition="debug", t="08:00:00")
 
 println("We are all connected and ready.")

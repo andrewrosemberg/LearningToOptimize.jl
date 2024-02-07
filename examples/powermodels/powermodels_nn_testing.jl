@@ -15,7 +15,7 @@ using Statistics
 # Parameters
 ##############
 case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
-network_formulation = ARGS[2] # network_formulation=DCPPowerModel SOCWRConicPowerModel DCPPowerModel
+network_formulation = ARGS[2] # network_formulation=ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 filetype = ArrowFile # ArrowFile # CSVFile
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)

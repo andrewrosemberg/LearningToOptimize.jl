@@ -26,7 +26,7 @@ case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
 network_formulation = ARGS[2] # network_formulation=ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 icnn = parse(Bool, ARGS[3]) # icnn=true # false
 filetype = ArrowFile # ArrowFile # CSVFile
-layers = [2048, 2048, 2048] # [512, 256, 64] # [256, 64, 32][1024, 1024, 1024]
+layers = [512] # [512, 256, 64] # [256, 64, 32][1024, 1024, 1024]
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
