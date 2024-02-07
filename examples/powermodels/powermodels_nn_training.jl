@@ -6,6 +6,7 @@ using Arrow
 using CSV
 using MLJFlux
 using MLUtils
+using MLJBase
 using Flux
 using MLJ
 using CUDA
@@ -25,7 +26,7 @@ case_name = ARGS[1] # case_name="pglib_opf_case300_ieee" # pglib_opf_case5_pjm
 network_formulation = ARGS[2] # network_formulation=ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 icnn = parse(Bool, ARGS[3]) # icnn=true # false
 filetype = ArrowFile # ArrowFile # CSVFile
-layers = [512, 256, 64] # [256, 64, 32]
+layers = [2048, 2048, 2048] # [512, 256, 64] # [256, 64, 32][1024, 1024, 1024]
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
@@ -101,6 +102,17 @@ if icnn
     )
 end
 
+# optimiser= Flux.Optimise.Adam(0.01, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+# nn = MultitargetNeuralNetworkRegressor(;
+#     builder=FullyConnectedBuilder(layers),
+#     rng=123,
+#     epochs=5000,
+#     optimiser=optimiser,
+#     acceleration=CUDALibs(),
+#     batch_size=32,
+#     loss=relative_rmse,
+# )
+
 nn = MultitargetNeuralNetworkRegressor(;
     builder=FullyConnectedBuilder(layers),
     rng=get_config(lg, "rng"),
@@ -120,32 +132,19 @@ mkpath(model_dir)
 # save_control =
 #     MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=1000)
 
-mutable struct SaveBest <: Function
-    best_loss::Float64
-    model_path::String
-end
-function (callback::SaveBest)(loss, mach)
-    if loss < callback.best_loss
-        callback.best_loss = loss
-        model = mach.fitresult.fitresult[1]
-        model_state = Flux.state(model)
-        jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
-    end
-    return nothing
-end
-
 model_path = joinpath(model_dir, save_file * ".jld2")
 
-save_control = SaveBest(1000, model_path)
+save_control = SaveBest(1000, model_path, 0.003)
 
 controls=[Step(1),
+    WithModelLossDo(save_control; stop_if_true=true),
+    # NumberLimit(n=4),
     # NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
     # GL(; alpha=4.0),
-    Threshold(0.003),
     InvalidValue(),
-    TimeLimit(; t=1),
-    WithModelLossDo(save_control),
+    # Threshold(0.003),
+    TimeLimit(; t=3),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
     WithIterationsDo(update_epochs)
@@ -154,7 +153,7 @@ controls=[Step(1),
 iterated_pipe =
     IteratedModel(model=nn,
         controls=controls,
-        resampling=Holdout(fraction_train=0.7),
+        # resampling=Holdout(fraction_train=0.7),
         measure = relative_mae,
 )
 
@@ -165,13 +164,13 @@ fit!(mach; verbosity=2)
 # Finish the run
 close(lg)
 
-# save model if final loss is better than the best loss
-if IterationControl.loss(iterated_pipe) < save_control.best_loss
-    mach = mach |> cpu
+# # save model if final loss is better than the best loss
+# if IterationControl.loss(iterated_pipe) < save_control.best_loss
+#     mach = mach |> cpu
 
-    fitted_model = mach.fitresult.fitresult[1]
+#     fitted_model = mach.fitresult.fitresult[1]
 
-    model_state = Flux.state(fitted_model)
+#     model_state = Flux.state(fitted_model)
 
-    jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
-end
+#     jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+# end

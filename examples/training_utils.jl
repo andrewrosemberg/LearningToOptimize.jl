@@ -15,6 +15,7 @@ function update_epochs(epoch)
     return nothing
 end
 
+import IterationControl: needs_loss, update!, done, takedown
 
 struct WithModelLossDo{F<:Function}
     f::F
@@ -23,14 +24,14 @@ struct WithModelLossDo{F<:Function}
 end
 
 # constructor:
-WithModelLossDo(; f=x->@info("loss: $x"),
+WithModelLossDo(; f=(x,model)->@info("loss: $x"),
            stop_if_true=false,
            stop_message=nothing) = WithModelLossDo(f, stop_if_true, stop_message)
 WithModelLossDo(f; kwargs...) = WithModelLossDo(; f=f, kwargs...)
 
-needs_loss(::WithModelLossDo) = true
+IterationControl.needs_loss(::WithModelLossDo) = true
 
-function update!(c::WithModelLossDo,
+function IterationControl.update!(c::WithModelLossDo,
                  model,
                  verbosity,
                  n,
@@ -42,9 +43,9 @@ function update!(c::WithModelLossDo,
     return (loss=loss, done=done)
 end
 
-done(c::WithModelLossDo, state) = state.done
+IterationControl.done(c::WithModelLossDo, state) = state.done
 
-function takedown(c::WithModelLossDo, verbosity, state)
+function IterationControl.takedown(c::WithModelLossDo, verbosity, state)
     verbosity > 1 && @info "final loss: $(state.loss). "
     if state.done
         message = c.stop_message === nothing ?
@@ -55,4 +56,26 @@ function takedown(c::WithModelLossDo, verbosity, state)
     else
         return merge(state, (log = "",))
     end
+end
+
+
+mutable struct SaveBest <: Function
+    best_loss::Float64
+    model_path::String
+    threshold::Float64
+end
+function (callback::SaveBest)(loss, ic_model)
+    update_loss(loss)
+    mach = IterationControl.expose(ic_model)
+    if loss < callback.best_loss
+        @info "best model change" callback.best_loss loss
+        callback.best_loss = loss
+        model = mach.fitresult[1]
+        model_state = Flux.state(model)
+        jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+    end
+    if loss < callback.threshold
+        return true
+    end
+    return false
 end
