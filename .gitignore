@@ -24,3 +24,4 @@ examples/unitcommitment/app/*
 *.log
 *.wandb
 *latest-run
+*.html

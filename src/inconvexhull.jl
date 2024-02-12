@@ -4,7 +4,7 @@
 
 Check if new points are inside the convex hull of the given points. Solves a linear programming problem to check if the points are inside the convex hull.
 """
-function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, solver; silent=true)
+function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, solver; silent=true, tol=1e-4)
     # Get the number of points and dimensions
     n, d = size(training_set)
     m, d_ = size(test_set)
@@ -44,7 +44,7 @@ function inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, 
         optimize!(model)
 
         # return if the points are inside the convex hull
-        in_convex_hull[i] = isapprox(JuMP.objective_value(model), 0.0)
+        in_convex_hull[i] = JuMP.objective_value(model) <= tol
     end
     
     return in_convex_hull

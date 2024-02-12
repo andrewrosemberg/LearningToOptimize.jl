@@ -9,11 +9,13 @@ cossim(x,y) = dot(x,y) / (norm(x)*norm(y))
 ##############
 # Parameters
 ##############
+network_formulation = "ACPPowerModel"
 case_name = "pglib_opf_case300_ieee"
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_train = joinpath(case_file_path, "input", "train")
 case_file_path_test = joinpath(case_file_path, "input", "test")
+case_file_path_output = joinpath(case_file_path, "output", string(network_formulation))
 
 ##############
 # Load Data
@@ -28,14 +30,22 @@ file_train = [
 file_test = [
     joinpath(case_file_path_test, file) for file in iter_files_test if occursin("input", file)
 ]
+iter_files_out = readdir(joinpath(case_file_path_output))
+iter_files_out = filter(x -> occursin("arrow", x), iter_files_out)
+file_outs = [
+    joinpath(case_file_path_output, file) for file in iter_files_out if occursin("output", file)
+]
 
 # Load input and output data tables
 input_table_train = Arrow.Table(file_train)
 input_table_test = Arrow.Table(file_test)
+output_table = Arrow.Table(file_outs)
 
 # Convert to dataframes
 input_data_train = DataFrame(input_table_train)
 input_data_test = DataFrame(input_table_test)
+output_data = DataFrame(output_table)
+input_data = vcat(input_data_train, input_data_test[!, Not(:in_train_convex_hull)])
 
 ##############
 # Plots
@@ -58,6 +68,7 @@ function total_load_vector(input_data; is_test=false)
     return df
 end
 
+######### Plot Load Vectors #########
 load_vector_train = total_load_vector(input_data_train)
 load_vector_test = total_load_vector(input_data_test; is_test=true)
 
@@ -79,4 +90,56 @@ p1 = plot(scatter(theta_train, norm_sim_train, proj = :polar, label="Train", col
 p2 = plot(scatter(theta_test, norm_sim_test, proj = :polar, label="Test", color=:orange));
 plot(p1, p2; title="Load Similarity", legend=:bottomright, layout = l)
 
+######### Plot Objective Function #########
+# Plot objective function for a single direction
 
+# Select two points in the extremes
+load_vector = total_load_vector(input_data)
+
+nominal_loads = Vector(load_vector[1, Not(:id)])
+norm_nominal_loads = norm(nominal_loads)
+
+load_vector.norm_loads = [norm(Vector(load_vector[i, Not(:id)])) for i in 1:size(load_vector, 1)] ./ norm_nominal_loads
+# join input and output data
+joined_data = innerjoin(load_vector, output_data[!, [:id, :operational_cost]], on=:id)
+
+# get k extreme points
+using L2O
+using Gurobi
+function maxk(a, k)
+    b = partialsortperm(a, 1:k, rev=true)
+    return collect(zip(b, a[b]))
+end
+function mink(a, k)
+    b = partialsortperm(a, 1:k, rev=false)
+    return collect(zip(b, a[b]))
+end
+k = 10
+idx_maxs = maxk(joined_data.norm_loads, k)
+idx_mins = mink(joined_data.norm_loads, k)
+
+# Objective function
+instances_in_convex_hulls = Array{DataFrame}(undef, k)
+for i in 1:k
+    @info "Processing instance $i"
+    instance_load_max = joined_data[idx_maxs[i][1]:idx_maxs[i][1], :]
+    instance_load_min = joined_data[idx_mins[i][1]:idx_mins[i][1], :]
+
+    # find instances between the two points (i.e. in their convex hull)
+    in_convex_hull = inconvexhull(
+        Matrix(vcat(instance_load_max, 
+        instance_load_min)[!, Not([:id, :norm_loads, :operational_cost])]), Matrix(joined_data[!, Not([:id, :norm_loads, :operational_cost])]),
+        Gurobi.Optimizer, silent=false, tol=0.1 # close to convex hull
+    )
+
+    instances_in_convex_hulls[i] = sort(joined_data[in_convex_hull, [:operational_cost, :norm_loads]], :norm_loads)
+end
+
+# Plot
+plotly()
+
+plt = plot(color=:blue, legend=false, xlabel="Total Load (%)", ylabel="Operational Cost", title="AC OPF - IEEE300");
+for i in 1:k
+    plot!(instances_in_convex_hulls[i][!, :norm_loads] * 100, instances_in_convex_hulls[i][!, :operational_cost], label="Direction $i", color=:red, alpha=0.4)
+end
+plt
