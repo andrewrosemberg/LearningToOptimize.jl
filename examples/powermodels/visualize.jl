@@ -48,6 +48,28 @@ output_data = DataFrame(output_table)
 input_data = vcat(input_data_train, input_data_test[!, Not(:in_train_convex_hull)])
 
 ##############
+# SOC VS AC
+##############
+network_formulation_soc = "SOCWRConicPowerModel"
+case_file_path_output_soc = joinpath(case_file_path, "output", string(network_formulation_soc))
+iter_files_out_soc = readdir(case_file_path_output_soc)
+iter_files_out_soc = filter(x -> occursin("arrow", x), iter_files_out_soc)
+file_outs_soc = [
+    joinpath(case_file_path_output_soc, file) for file in iter_files_out_soc if occursin("output", file)
+]
+output_table_soc = Arrow.Table(file_outs_soc)
+output_data_soc = DataFrame(output_table_soc)
+output_data_soc.operational_cost_soc = output_data_soc.operational_cost
+output_data_soc = output_data_soc[output_data_soc.operational_cost .> 10, :]
+
+# compare SOC and AC operational_cost by id
+ac_soc = innerjoin(output_data[!, [:id, :operational_cost]], output_data_soc[!, [:id, :operational_cost_soc]], on=:id, makeunique=true)
+
+ac_soc.error = abs.(ac_soc.operational_cost .- ac_soc.operational_cost_soc) ./ ac_soc.operational_cost * 100
+mean(ac_soc.error)
+maximum(ac_soc.error)
+ac_soc[findmax(ac_soc.error)[2], :]
+##############
 # Plots
 ##############
 
