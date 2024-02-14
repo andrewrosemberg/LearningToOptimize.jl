@@ -68,6 +68,10 @@ end
 # Define a container to hold any optimiser specific parameters (if any):
 struct ConvexRule <: Flux.Optimise.AbstractOptimiser
     rule::Flux.Optimise.AbstractOptimiser
+    tol::Real
+end
+function ConvexRule(rule::Flux.Optimise.AbstractOptimiser; tol=1e-6)
+    return ConvexRule(rule, tol)
 end
 
 """
@@ -113,7 +117,7 @@ function MLJFlux.train!(
             return batch_loss
         end
         Flux.update!(optimiser.rule, parameters, gs)
-        make_convex!(chain)
+        make_convex!(chain; tol=optimiser.tol)
     end
     return training_loss / n_batches
 end

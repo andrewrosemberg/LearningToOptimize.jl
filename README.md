@@ -134,7 +134,7 @@ Flux.train!(loss, Flux.params(model), [(input_features, output_variables)], opti
 predictions = model(input_features)
 ```
 
-## Comming Soon
+## Coming Soon
 
 Future features:
  - ML objectives that penalize infeasible predictions;

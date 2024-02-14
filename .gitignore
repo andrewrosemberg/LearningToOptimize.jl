@@ -12,9 +12,16 @@ Manifest.toml
 *.out
 *.sbatch
 examples/unitcommitment/app/*
+*/app/*
 *.edu
-examples/unitcommitment/wandb/*
+*.yaml
 *.png
 *.jls
 *.jlso
 *.jld2
+*.txt
+*.json
+*.log
+*.wandb
+*latest-run
+*.html
