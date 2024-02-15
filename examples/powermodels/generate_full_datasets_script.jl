@@ -1,45 +1,61 @@
-# run with: julia ./examples/powermodels/generate_full_datasets_script.jl "./examples/powermodels/data/pglib_opf_case300_ieee/case300.config.toml"
-config_path = ARGS[1]
+# run with: julia ./examples/powermodels/generate_full_datasets_script.jl "./examples/powermodels/data/pglib_opf_case300_ieee/case300.config.toml" SOCWRConicPowerModel
 
-using Pkg: Pkg;
-Pkg.activate(".");
+################################################################
+############## PowerModels Dataset Generation ##############
+################################################################
 
-using TestEnv
-TestEnv.activate()
+using Distributed
+using Random
+
+##############
+# Load Functions
+##############
+
+@everywhere import Pkg
+
+@everywhere Pkg.activate(dirname(dirname(@__DIR__)))
+
+@everywhere Pkg.instantiate()
 
 ########## SCRIPT REQUIRED PACKAGES ##########
 
-using L2O
-using Arrow
-using Test
-using UUIDs
-using PowerModels
-import JuMP.MOI as MOI
-import ParametricOptInterface as POI
-using TOML
-
-PowerModels.silence()
+@everywhere using L2O
+@everywhere using Arrow
+@everywhere using Test
+@everywhere using UUIDs
+@everywhere using PowerModels
+@everywhere import JuMP.MOI as MOI
+@everywhere import ParametricOptInterface as POI
+@everywhere using TOML
 
 ## SOLVER PACKAGES ##
 
-using Clarabel
-using Gurobi
-using NonconvexNLopt
+# using Clarabel
+@everywhere using Gurobi
+
+PowerModels.silence()
+
+##############
+# Parameters
+##############
+
+config_path = ARGS[3]
 
 ########## POI SOLVER ##########
 
-cached =
-    () -> MOI.Bridges.full_bridge_optimizer(
-        MOI.Utilities.CachingOptimizer(
-            MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
-            Clarabel.Optimizer(),
-        ),
-        Float64,
-    )
+# cached =
+#     () -> MOI.Bridges.full_bridge_optimizer(
+#         MOI.Utilities.CachingOptimizer(
+#             MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+#             Gurobi.Optimizer(),
+#         ),
+#         Float64,
+#     )
 
-POI_cached_optimizer() = POI.Optimizer(cached())
+POI_cached_optimizer() = Gurobi.Optimizer() # POI.Optimizer(cached())
 
 ########## PARAMETERS ##########
+@info "Loading configuration file: $config_path"
 
 config = TOML.parsefile(config_path)
 path = config["export_dir"]
@@ -52,7 +68,11 @@ filetype = ArrowFile # ArrowFile # CSVFile
 case_name = config["case_name"]
 case_file_path = joinpath(path, case_name)
 mkpath(case_file_path)
-network_formulation = eval(Symbol(ARGS[2])) # SOCWRConicPowerModel # DCPPowerModel
+network_formulation = eval(Symbol(ARGS[4])) # SOCWRConicPowerModel # DCPPowerModel
+
+##############
+# Solve and store solutions
+##############
 
 ########## SAMPLER DATASET GENERATION ##########
 
@@ -136,6 +156,7 @@ end
 
 ########## WORST CASE NONCONVEX DATASET GENERATION ##########
 if haskey(config, "worst_case_nonconvex")
+    @everywhere using NonconvexNLopt
     num_p = config["worst_case_nonconvex"]["num_samples"]
 
     success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_Nonconvex(
