@@ -1,4 +1,4 @@
-# run with: julia ./examples/powermodels/generate_full_datasets_script.jl "./examples/powermodels/data/pglib_opf_case300_ieee/case300.config.toml" SOCWRConicPowerModel
+# run with: julia ./generate_full_datasets_script.jl 1 1 "../powermodels/data/6468_rte.config.toml" SOCWRConicPowerModel
 
 ################################################################
 ############## PowerModels Dataset Generation ##############
@@ -88,8 +88,8 @@ if haskey(config, "sampler")
             filetype=filetype,
             network_formulation=network_formulation,
             optimizer=POI_cached_optimizer,
-            internal_load_sampler=(_o, n) -> load_sampler(
-                _o, n; max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01
+            internal_load_sampler=(_o, n, idx, num_inputs) -> load_sampler(
+                _o, n, idx, num_inputs; max_multiplier=1.25, min_multiplier=0.8, step_multiplier=0.01
             ),
         )
         global success_solves += _success_solves
