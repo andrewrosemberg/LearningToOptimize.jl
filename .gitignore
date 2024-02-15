@@ -25,3 +25,4 @@ examples/unitcommitment/app/*
 *.wandb
 *latest-run
 *.html
+*.config.toml
