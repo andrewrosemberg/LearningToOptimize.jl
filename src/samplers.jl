@@ -48,5 +48,5 @@ function box_sampler(
     range_p::AbstractVector{T}=0.8:0.01:1.25,
 ) where {T<:Real,F<:Integer}
     # parameter sampling
-    return hcat(box_sampler.(original_parameters, num_p, range_p)...)
+    return vcat([box_sampler(p, num_p, range_p)' for p in original_parameters]...)
 end
