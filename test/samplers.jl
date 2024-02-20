@@ -29,11 +29,13 @@ end
 function test_general_sampler(; num_p=10, num_s=5, range_p=1.01:0.01:1.25)
     original_parameter = rand(num_p)
     parameters = general_sampler(
-        original_parameter,
-        range_p,
-        num_s,
-        range_p,
+        original_parameter;
+        samplers=[
+            (original_parameters) -> scaled_distribution_sampler(original_parameters, num_s),
+            line_sampler, 
+            (original_parameters) -> box_sampler(original_parameters, num_s),
+        ]
     )
-    @test size(parameters) == (num_p, num_s + length(range_p) * (1 + num_p))
+    @test size(parameters) == (num_p, 2 * num_s + length(range_p) * (1 + num_p))
     return nothing
 end

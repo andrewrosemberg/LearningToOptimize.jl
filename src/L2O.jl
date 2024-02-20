@@ -8,6 +8,7 @@ import ParametricOptInterface as POI
 import JuMP.MOI as MOI
 import Base: string
 using Statistics
+using Distributions
 
 using Zygote
 
@@ -37,6 +38,7 @@ export ArrowFile,
     inconvexhull,
     line_sampler,
     box_sampler,
+    scaled_distribution_sampler,
     general_sampler
 
 include("datasetgen.jl")
