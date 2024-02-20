@@ -2,7 +2,6 @@ module L2O
 
 using Arrow
 using CSV
-using Dualization
 using JuMP
 using UUIDs
 import ParametricOptInterface as POI
@@ -10,7 +9,6 @@ import JuMP.MOI as MOI
 import Base: string
 using Statistics
 
-using Nonconvex
 using Zygote
 
 using MLJFlux
@@ -37,7 +35,8 @@ export ArrowFile,
     relative_rmse,
     relative_mae,
     inconvexhull,
-    line_sampler
+    line_sampler,
+    box_sampler
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
