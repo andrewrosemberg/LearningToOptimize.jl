@@ -9,8 +9,8 @@ cossim(x,y) = dot(x,y) / (norm(x)*norm(y))
 ##############
 # Parameters
 ##############
-network_formulation = "ACPPowerModel"
-case_name = "pglib_opf_case300_ieee"
+network_formulation = "SOCWRConicPowerModel" # "DCPPowerModel" # "SOCWRConicPowerModel"
+case_name = "6468_rte" # pglib_opf_case300_ieee # 6468_rte 
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
 case_file_path_train = joinpath(case_file_path, "input", "train")
@@ -86,6 +86,19 @@ function total_load_vector(input_data; is_test=false)
     end
     for j in 1:size(input_data, 1), i in 1:num_loads
         df[j, "load[$i]"] = sqrt(input_data[j, "pd[$i]"]^2 + input_data[j, "qd[$i]"]^2)
+    end
+    return df
+end
+
+function total_load_vector_annon(input_data)
+    df = DataFrame()
+    df.id = input_data.id
+    num_loads = floor(Int, length(names(input_data[!, Not(:id)])) / 2)
+    for i in 1:num_loads
+        df[!, "load[$i]"] = zeros(size(input_data, 1))
+    end
+    for j in 1:size(input_data, 1), i in 1:num_loads
+        df[j, "load[$i]"] = sqrt(input_data[j, i+1]^2 + input_data[j, i+num_loads+1]^2)
     end
     return df
 end

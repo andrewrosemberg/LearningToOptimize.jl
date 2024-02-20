@@ -26,7 +26,6 @@ export ArrowFile,
     Recorder,
     save,
     solve_batch,
-    WorstCaseProblemIterator,
     set_primal_variable!,
     set_dual_variable!,
     set_model!,
@@ -37,16 +36,16 @@ export ArrowFile,
     ConvexRule,
     relative_rmse,
     relative_mae,
-    inconvexhull
+    inconvexhull,
+    line_sampler
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
 include("arrowrecorder.jl")
-include("worst_case.jl")
-include("worst_case_iter.jl")
 include("FullyConnected.jl")
 include("nn_expression.jl")
 include("metrics.jl")
 include("inconvexhull.jl")
+include("samplers.jl")
 
 end

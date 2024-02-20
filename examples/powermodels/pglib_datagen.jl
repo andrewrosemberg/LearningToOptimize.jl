@@ -77,7 +77,9 @@ function load_parameter_factory(model, indices; load_set=nothing)
     if isnothing(load_set)
         return @variable(model, _p[i=indices])
     end
-    return @variable(model, _p[i=indices] in load_set)
+    num_loads = floor(Int,length(indices) / 2)
+    pd_index = indices[1:num_loads]
+    return [@variable(model, pd[i=pd_index] in load_set[i]).data; @variable(model, qd[i=pd_index] in load_set[i+num_loads]).data]
 end
 
 """

@@ -131,42 +131,42 @@ if haskey(config, "line_search")
 end
 
 ########## WORST CASE DUAL DATASET GENERATION ##########
-if haskey(config, "worst_case_dual")
-    num_p = config["worst_case_dual"]["num_samples"]
-    function optimizer_factory()
-        IPO_OPT = Gurobi.Optimizer()
-        # IPO_OPT = MadNLP.Optimizer(print_level=MadNLP.INFO, max_iter=100)
-        # IPO = MOI.Bridges.Constraint.SOCtoNonConvexQuad{Float64}(IPO_OPT)
-        # MIP = QuadraticToBinary.Optimizer{Float64}(IPO)
-        return () -> IPO_OPT
-    end
+# if haskey(config, "worst_case_dual")
+#     num_p = config["worst_case_dual"]["num_samples"]
+#     function optimizer_factory()
+#         IPO_OPT = Gurobi.Optimizer()
+#         # IPO_OPT = MadNLP.Optimizer(print_level=MadNLP.INFO, max_iter=100)
+#         # IPO = MOI.Bridges.Constraint.SOCtoNonConvexQuad{Float64}(IPO_OPT)
+#         # MIP = QuadraticToBinary.Optimizer{Float64}(IPO)
+#         return () -> IPO_OPT
+#     end
 
-    success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset(
-        case_file_path,
-        case_name;
-        num_p=num_p,
-        filetype=filetype,
-        network_formulation=network_formulation,
-        optimizer_factory=optimizer_factory,
-        hook=(model) -> set_optimizer_attribute(model, "NonConvex", 2),
-    )
+#     success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset(
+#         case_file_path,
+#         case_name;
+#         num_p=num_p,
+#         filetype=filetype,
+#         network_formulation=network_formulation,
+#         optimizer_factory=optimizer_factory,
+#         hook=(model) -> set_optimizer_attribute(model, "NonConvex", 2),
+#     )
 
-    @info "Success solves Worst Case: $(success_solves) of $(num_p)"
-end
+#     @info "Success solves Worst Case: $(success_solves) of $(num_p)"
+# end
 
-########## WORST CASE NONCONVEX DATASET GENERATION ##########
-if haskey(config, "worst_case_nonconvex")
-    @everywhere using NonconvexNLopt
-    num_p = config["worst_case_nonconvex"]["num_samples"]
+# ########## WORST CASE NONCONVEX DATASET GENERATION ##########
+# if haskey(config, "worst_case_nonconvex")
+#     @everywhere using NonconvexNLopt
+#     num_p = config["worst_case_nonconvex"]["num_samples"]
 
-    success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_Nonconvex(
-        case_file_path,
-        case_name;
-        num_p=num_p,
-        filetype=filetype,
-        network_formulation=network_formulation,
-        optimizer=POI_cached_optimizer,
-    )
+#     success_solves, number_variables, number_loads, batch_id = generate_worst_case_dataset_Nonconvex(
+#         case_file_path,
+#         case_name;
+#         num_p=num_p,
+#         filetype=filetype,
+#         network_formulation=network_formulation,
+#         optimizer=POI_cached_optimizer,
+#     )
 
-    @info "Success solves Worst Case: $(success_solves * 100) of $(num_p)"
-end
+#     @info "Success solves Worst Case: $(success_solves * 100) of $(num_p)"
+# end
