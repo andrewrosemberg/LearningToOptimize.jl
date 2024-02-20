@@ -1,3 +1,5 @@
+using NonconvexNLopt
+
 """
     test_worst_case_problem_iterator(path::AbstractString)
 

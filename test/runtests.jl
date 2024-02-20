@@ -15,8 +15,6 @@ using CSV
 using DataFrames
 using Optimisers
 
-using NonconvexNLopt
-
 const test_dir = dirname(@__FILE__)
 const examples_dir = joinpath(test_dir, "..", "examples")
 
