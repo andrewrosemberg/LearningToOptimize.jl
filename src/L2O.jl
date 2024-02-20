@@ -36,7 +36,8 @@ export ArrowFile,
     relative_mae,
     inconvexhull,
     line_sampler,
-    box_sampler
+    box_sampler,
+    general_sampler
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
