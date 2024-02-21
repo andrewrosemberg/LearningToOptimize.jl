@@ -77,7 +77,7 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
         file;
         samplers=[
             (original_parameters) -> scaled_distribution_sampler(original_parameters, num_s),
-            line_sampler, 
+            (original_parameters) -> line_sampler(original_parameters, range_p),
             (original_parameters) -> box_sampler(original_parameters, num_s),
         ],
         save_file=save_file,
