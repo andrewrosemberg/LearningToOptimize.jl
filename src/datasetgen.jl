@@ -20,10 +20,15 @@ termination_status_filter(status) = in(status, ACCEPTED_TERMINATION_STATUSES)
 primal_status_filter(status) = in(status, DECISION_STATUS)
 dual_status_filter(status) = in(status, DECISION_STATUS)
 
-function filter_fn(model)
-    return termination_status_filter(termination_status(model)) &&
-           primal_status_filter(primal_status(model)) &&
-           dual_status_filter(dual_status(model))
+function filter_fn(model; check_primal=true, check_dual=true)
+    if !termination_status_filter(termination_status(model))
+        return false
+    elseif check_primal && !primal_status_filter(primal_status(model))
+        return false
+    elseif check_dual && !dual_status_filter(dual_status(model))
+        return false
+    end
+    return true
 end
 
 """

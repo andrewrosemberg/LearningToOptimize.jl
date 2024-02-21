@@ -4,7 +4,7 @@ using PGLib
 using Gurobi
 
 optimizer = Gurobi.Optimizer
-network_formulation = ACPPowerModel # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
+network_formulation = SOCWRConicPowerModel # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 
 matpower_case_name = "6468_rte"
 
@@ -16,7 +16,7 @@ model = JuMP.Model(optimizer)
 # Save original load value and Link POI
 num_loads = length(network_data["load"])
 
-@variable(model, load_scaler[i=1:num_loads] in MOI.Parameter.(1.0))
+@variable(model, load_scaler[i=1:num_loads] in MOI.Parameter.(1.03))
 
 for (str_i, l) in network_data["load"]
     i = parse(Int, str_i)
@@ -31,6 +31,9 @@ pm = instantiate_model(
     setting=Dict("output" => Dict("branch_flows" => true, "duals" => true)),
     jump_model=model,
 )
+
+# JuMP.optimize!(model)
+# JuMP.termination_status(model)
 
 write_to_file(model, "$(matpower_case_name)_$(network_formulation)_POI_load.mof.json")
 
