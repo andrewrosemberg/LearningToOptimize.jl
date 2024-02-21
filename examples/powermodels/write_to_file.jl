@@ -4,9 +4,9 @@ using PGLib
 using Gurobi
 
 optimizer = Gurobi.Optimizer
-network_formulation = DCPPowerModel
+network_formulation = ACPPowerModel # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 
-matpower_case_name = "pglib_opf_case5_pjm"
+matpower_case_name = "6468_rte"
 
 network_data = make_basic_network(pglib(matpower_case_name))
 
