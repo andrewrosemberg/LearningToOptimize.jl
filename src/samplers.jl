@@ -90,14 +90,36 @@ function general_sampler(
     return hcat([sampler(original_parameters) for sampler in samplers]...)
 end
 
-function load_parameters(file::AbstractString)
-    model = read_from_file(file)
+function load_parameters(model::JuMP.Model)
     cons = constraint_object.(all_constraints(model, VariableRef, MOI.Parameter{Float64}))
     parameters = [cons[i].func for i in 1:length(cons)]
     vals = [cons[i].set.value for i in 1:length(cons)]
     return parameters, vals
 end
 
-function general_sampler(file::AbstractString)
-    return general_sampler(load_parameters(file))
+function load_parameters(file::AbstractString)
+    return load_parameters(read_from_file(file))
+end
+
+function general_sampler(
+    file::AbstractString;
+    samplers::Vector{Function}=[
+        (original_parameters) -> scaled_distribution_sampler(original_parameters, 1000),
+        line_sampler, 
+        (original_parameters) -> box_sampler(original_parameters, 10),
+    ],
+    filetype::FileType=ArrowFile,
+    save_file::AbstractString=split(file, ".mof.json")[1],
+    batch_id::UUID=uuid1()
+) where {T<:Real}
+    parameters, original_values = load_parameters(file)
+    problem_iterator = ProblemIterator(
+        Dict{VariableRef,Vector{T}}(zip(parameters, original_values))
+    )
+    save(
+        problem_iterator,
+        save_file * "_input_" * batch_id,
+        filetype,
+    )
+    return problem_iterator
 end
