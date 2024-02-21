@@ -4,9 +4,9 @@ using PGLib
 using Gurobi
 
 optimizer = Gurobi.Optimizer
-network_formulation = SOCWRConicPowerModel
+network_formulation = DCPPowerModel
 
-matpower_case_name = "6468_rte"
+matpower_case_name = "pglib_opf_case5_pjm"
 
 network_data = make_basic_network(pglib(matpower_case_name))
 
@@ -15,18 +15,13 @@ model = JuMP.Model(optimizer)
 
 # Save original load value and Link POI
 num_loads = length(network_data["load"])
-num_inputs = num_loads * 2
-original_load = vcat(
-    [network_data["load"]["$l"]["pd"] for l in 1:num_loads],
-    [network_data["load"]["$l"]["qd"] for l in 1:num_loads],
-)
 
-p = load_parameter_factory(model, 1:num_inputs; load_set=MOI.Parameter.(original_load))
+@variable(model, load_scaler[i=1:num_loads] in MOI.Parameter.(1.0))
 
 for (str_i, l) in network_data["load"]
     i = parse(Int, str_i)
-    l["pd"] = p[i]
-    l["qd"] = p[num_loads + i]
+    l["pd"] = load_scaler[i] * l["pd"]
+    l["qd"] = load_scaler[i] * l["qd"]
 end
 
 pm = instantiate_model(
@@ -39,4 +34,4 @@ pm = instantiate_model(
 
 write_to_file(model, "$(matpower_case_name)_$(network_formulation)_POI_load.mof.json")
 
-dest_model = read_from_file("$(matpower_case_name)_$(network_formulation)_POI_load.mof.json")
+# dest_model = read_from_file("$(matpower_case_name)_$(network_formulation)_POI_load.mof.json")

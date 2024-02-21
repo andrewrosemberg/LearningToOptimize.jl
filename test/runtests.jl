@@ -31,13 +31,17 @@ include(joinpath(test_dir, "inconvexhull.jl"))
 include(joinpath(test_dir, "samplers.jl"))
 
 @testset "L2O.jl" begin
+    test_load_parameters_model()
+    test_load_parameters()
     test_line_sampler()
     test_box_sampler()
+    test_general_sampler()
     test_fully_connected()
     test_flux_jump_basic()
     test_inconvexhull()
 
     mktempdir() do path
+        test_general_sampler_file(; cache_dir=path)
         test_problem_iterator(path)
         file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
         test_flux_forecaster(file_in, file_out)
