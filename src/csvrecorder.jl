@@ -85,3 +85,8 @@ function save(table::NamedTuple, filename::String, ::Type{CSVFile}; kwargs...)
     CSV.write(filename, table; append=isappend)
     return nothing
 end
+
+function load(filename::String, ::Type{CSVFile})
+    filename = filename * "." * string(CSVFile)
+    return CSV.read(filename, DataFrame)
+end

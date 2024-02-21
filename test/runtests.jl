@@ -41,7 +41,11 @@ include(joinpath(test_dir, "samplers.jl"))
     test_inconvexhull()
 
     mktempdir() do path
-        test_general_sampler_file(; cache_dir=path)
+        model_file = "pglib_opf_case5_pjm_DCPPowerModel_POI_load.mof.json"
+        @testset "Samplers saving on $filetype" for filetype in [ArrowFile, CSVFile]
+            file_in = test_general_sampler_file(model_file; cache_dir=path, filetype=filetype)
+            test_load(model_file, input_file, filetype)
+        end
         test_problem_iterator(path)
         file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
         test_flux_forecaster(file_in, file_out)

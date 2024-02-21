@@ -69,6 +69,7 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
     cache_dir=mktempdir(),
     batch_id=uuid1(),
     save_file = joinpath(cache_dir, split(split(file, ".mof.json")[1], "/")[end] * "_input_" * string(batch_id)),
+    filetype=CSVFile
 )
     _, vals = L2O.load_parameters(file)
     num_p=length(vals)
@@ -80,13 +81,14 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
             (original_parameters) -> box_sampler(original_parameters, num_s),
         ],
         save_file=save_file,
-        batch_id=batch_id
+        batch_id=batch_id,
+        filetype=filetype
     )
     @test length(problem_iterator.ids) == 2 * num_s + length(range_p) * (1 + num_p)
     @test length(problem_iterator.pairs) == num_p
 
-    input_table = DataFrame(Arrow.Table(save_file * ".arrow"))
+    input_table = load(save_file, filetype)
     @test size(input_table) == (length(problem_iterator.ids), num_p + 1)
 
-    return nothing
+    return save_file
 end

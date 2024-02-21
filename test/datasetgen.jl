@@ -97,3 +97,8 @@ function test_problem_iterator(path::AbstractString)
         end
     end
 end
+
+function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}) where {T<:FileType}
+    problem_iterator = load(model_file, input_file, T)
+    @test problem_iterator isa AbstractProblemIterator
+end

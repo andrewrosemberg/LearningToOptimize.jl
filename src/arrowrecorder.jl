@@ -59,3 +59,7 @@ function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
     filename = filename * "." * string(ArrowFile)
     return Arrow.write(filename, table)
 end
+
+function load(filename::String, ::Type{ArrowFile})
+    return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
+end

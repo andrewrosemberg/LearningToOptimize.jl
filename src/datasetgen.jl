@@ -136,18 +136,35 @@ function ProblemIterator(
 end
 
 """
-    save(problem_iterator::ProblemIterator, filename::String, file_type::Type{T})
+    save(problem_iterator::ProblemIterator, filename::AbstractString, file_type::Type{T})
 
 Save optimization problem instances to a file.
 """
 function save(
-    problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
+    problem_iterator::AbstractProblemIterator, filename::AbstractString, file_type::Type{T}
 ) where {T<:FileType}
     kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
     df = (; id=problem_iterator.ids,)
     df = merge(df, (; zip(Symbol.(kys), [problem_iterator.pairs[ky] for ky in kys])...))
     save(df, filename, file_type)
     return nothing
+end
+
+function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}) where {T<:FileType}
+    df = load(input_file, T)
+    model = read_from_file(model_file)
+    parameters, _ = L2O.load_parameters(model)
+    ids = df.id
+    pairs = Dict{VariableRef,Vector{Float64}}()
+    for ky in keys(df)
+        if ky != :id
+            parameter = findfirst(parameters) do p
+                name(p) == ky
+            end
+            push!(pairs, parameter => df[ky])
+        end
+    end
+    return ProblemIterator(ids, pairs)
 end
 
 """
