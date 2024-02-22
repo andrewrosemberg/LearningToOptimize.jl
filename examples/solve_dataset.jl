@@ -42,6 +42,7 @@ batch_size = 200
 problem_iterators = load(model_file, input_file, filetype; batch_size=batch_size)
 
 @sync @distributed for problem_iterators in problem_iterators
+    set_optimizer(problem_iterator.model, POI_cached_optimizer())
     output_file = joinpath(save_path, "$(case_name)_output_$(UUID())")
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
