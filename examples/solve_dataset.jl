@@ -11,7 +11,7 @@ using Random
 
 @everywhere import Pkg
 
-@everywhere Pkg.activate(dirname(dirname(@__DIR__)))
+@everywhere Pkg.activate(dirname(@__DIR__))
 
 @everywhere Pkg.instantiate()
 
