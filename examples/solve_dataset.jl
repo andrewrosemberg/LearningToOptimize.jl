@@ -35,26 +35,13 @@ input_file = "examples/powermodels/data/6468_rte/input/6468_rte_POI_load_input_7
 
 save_path = "examples/powermodels/data/6468_rte/output/"
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
+batch_size = 200
 
-problem_iterator = load(model_file, input_file, filetype)
+problem_iterators = load(model_file, input_file, filetype; batch_size=batch_size)
 
-batch_size = 10
-num_problems = length(problem_iterator.ids)
-num_batches = ceil(Int, num_problems / batch_size)
-
-recorder = Recorder{filetype}(file; filterfn= (model) -> true, model=problem_iterator.model)
-
-variable_refs = return_variablerefs(pm)
-for variableref in variable_refs
-    set_name(variableref, replace(name(variableref), "," => "_"))
-end
-set_primal_variable!(recorder, variable_refs)
-
-ProblemIterator(ids, pairs)
-
-########## SOLVE ##########
-@sync @distributed for i in 1:num_batches
-    idx_range = (i-1)*batch_size+1:min(i*batch_size, length(num_problems))
-    
-    @info "Batch $i of $num_batches done"
+@sync @distributed for problem_iterators in problem_iterators
+    output_file = joinpath(save_path, "$(case_name)_output_$(UUID())")
+    recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
+    successfull_solves = solve_batch(problem_iterator, recorder)
+    @info "Solved $(length(successfull_solves)) problems"
 end
