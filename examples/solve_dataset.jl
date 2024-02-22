@@ -37,6 +37,8 @@ save_path = "examples/powermodels/data/6468_rte/output/"
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
 batch_size = 200
 
+########## SOLVE ##########
+
 problem_iterators = load(model_file, input_file, filetype; batch_size=batch_size)
 
 @sync @distributed for problem_iterators in problem_iterators
