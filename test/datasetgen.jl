@@ -113,8 +113,8 @@ function test_load(model_file::AbstractString, input_file::AbstractString, ::Typ
     problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids)
     @test isnothing(problem_iterator)
     # Test Load batch of problem iterators
-    problem_iterators =  L2O.load(model_file, input_file, T; batch_size=batch_size)
-    @test length(problem_iterators) == ceil(Int, length(ids) / batch_size)
-    @test all(isa.(problem_iterators, L2O.AbstractProblemIterator))
+    problem_iterator_factory, num_batches =  L2O.load(model_file, input_file, T; batch_size=batch_size)
+    @test num_batches == ceil(Int, length(ids) / batch_size)
+    @test problem_iterator_factory(1) isa L2O.AbstractProblemIterator
     return nothing
 end

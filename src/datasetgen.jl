@@ -196,7 +196,7 @@ function load(model_file::AbstractString, input_file::AbstractString, ::Type{T};
     # Batch
     num_batches = ceil(Int, length(ids) / batch_size)
     idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
-    return [ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], model_file)) for i in 1:num_batches]
+    return (i) -> ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], model_file)), num_batches
 end
 
 """
