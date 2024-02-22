@@ -9,9 +9,9 @@ using Random
 # Load Functions
 ##############
 
-@everywhere import Pkg
+@everywhere l2o_path = dirname(@__DIR__)
 
-l2o_path = dirname(@__DIR__)
+@everywhere import Pkg
 
 @everywhere Pkg.activate(l2o_path)
 
