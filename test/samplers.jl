@@ -87,8 +87,8 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
     @test length(problem_iterator.ids) == 2 * num_s + length(range_p) * (1 + num_p)
     @test length(problem_iterator.pairs) == num_p
 
-    input_table = load(save_file, filetype)
+    input_table = L2O.load(save_file, filetype)
     @test size(input_table) == (length(problem_iterator.ids), num_p + 1)
 
-    return save_file
+    return save_file, problem_iterator.ids
 end

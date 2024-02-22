@@ -2,6 +2,7 @@ module L2O
 
 using Arrow
 using CSV
+using DataFrames
 using JuMP
 using UUIDs
 import ParametricOptInterface as POI
@@ -24,6 +25,7 @@ export ArrowFile,
     ProblemIterator,
     Recorder,
     save,
+    load,
     solve_batch,
     set_primal_variable!,
     set_dual_variable!,

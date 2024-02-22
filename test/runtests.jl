@@ -43,8 +43,8 @@ include(joinpath(test_dir, "samplers.jl"))
     mktempdir() do path
         model_file = "pglib_opf_case5_pjm_DCPPowerModel_POI_load.mof.json"
         @testset "Samplers saving on $filetype" for filetype in [ArrowFile, CSVFile]
-            file_in = test_general_sampler_file(model_file; cache_dir=path, filetype=filetype)
-            test_load(model_file, input_file, filetype)
+            file_in, ids = test_general_sampler_file(model_file; cache_dir=path, filetype=filetype)
+            test_load(model_file, file_in, filetype, ids)
         end
         test_problem_iterator(path)
         file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)

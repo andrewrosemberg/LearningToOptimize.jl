@@ -150,21 +150,49 @@ function save(
     return nothing
 end
 
-function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}) where {T<:FileType}
-    df = load(input_file, T)
-    model = read_from_file(model_file)
-    parameters, _ = L2O.load_parameters(model)
-    ids = df.id
+function _dataframe_to_dict(df::DataFrame, parameters::Vector{VariableRef})
     pairs = Dict{VariableRef,Vector{Float64}}()
-    for ky in keys(df)
-        if ky != :id
-            parameter = findfirst(parameters) do p
-                name(p) == ky
+    for ky in names(df)
+        if ky != "id"
+            idx = findfirst(parameters) do p
+                name(p) == string(ky)
             end
-            push!(pairs, parameter => df[ky])
+            parameter = parameters[idx]
+            push!(pairs, parameter => df[!,ky])
         end
     end
-    return ProblemIterator(ids, pairs)
+    return pairs
+end
+
+function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}; 
+    batch_size::Union{Nothing, Integer}=nothing,
+    ignore_ids::Vector{UUID}=UUID[]
+) where {T<:FileType}
+    # Load full set
+    df = load(input_file, T)
+    # Remove ignored ids
+    df.id = UUID.(df.id)
+    if !isempty(ignore_ids)
+        df = filter(:id => (id) -> !(id in ignore_ids), df)
+        if isempty(df)
+            @warn("All ids are ignored")
+            return nothing
+        end
+    end
+    ids = df.id
+    # Load model
+    model = read_from_file(model_file)
+    # Retrieve parameters
+    parameters, _ = L2O.load_parameters(model)
+    # No batch
+    if isnothing(batch_size)
+        pairs = _dataframe_to_dict(df, parameters)
+        return ProblemIterator(ids, pairs)
+    end
+    # Batch
+    num_batches = ceil(Int, length(ids) / batch_size)
+    idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
+    return [ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], parameters)) for i in 1:num_batches]
 end
 
 """

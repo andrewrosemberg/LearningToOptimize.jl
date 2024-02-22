@@ -98,7 +98,23 @@ function test_problem_iterator(path::AbstractString)
     end
 end
 
-function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}) where {T<:FileType}
-    problem_iterator = load(model_file, input_file, T)
-    @test problem_iterator isa AbstractProblemIterator
+function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}, ids::Vector{UUID};
+    batch_size::Integer=32
+) where {T<:L2O.FileType}
+    # Test Load full set 
+    problem_iterator = L2O.load(model_file, input_file, T)
+    @test problem_iterator isa L2O.AbstractProblemIterator
+    @test length(problem_iterator.ids) == length(ids)
+    # Test load only half of the ids
+    num_ids_ignored = floor(Int, length(ids) / 2)
+    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids[1:num_ids_ignored])
+    @test length(problem_iterator.ids) == length(ids) - num_ids_ignored
+    # Test warning all ids to be ignored
+    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids)
+    @test isnothing(problem_iterator)
+    # Test Load batch of problem iterators
+    problem_iterators =  L2O.load(model_file, input_file, T; batch_size=batch_size)
+    @test length(problem_iterators) == ceil(Int, length(ids) / batch_size)
+    @test all(isa.(problem_iterators, L2O.AbstractProblemIterator))
+    return nothing
 end
