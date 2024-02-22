@@ -164,6 +164,14 @@ function _dataframe_to_dict(df::DataFrame, parameters::Vector{VariableRef})
     return pairs
 end
 
+function _dataframe_to_dict(df::DataFrame, model_file::AbstractString)
+    # Load model
+    model = read_from_file(model_file)
+    # Retrieve parameters
+    parameters, _ = L2O.load_parameters(model)
+    return _dataframe_to_dict(df, parameters)
+end
+
 function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}; 
     batch_size::Union{Nothing, Integer}=nothing,
     ignore_ids::Vector{UUID}=UUID[]
@@ -180,19 +188,15 @@ function load(model_file::AbstractString, input_file::AbstractString, ::Type{T};
         end
     end
     ids = df.id
-    # Load model
-    model = read_from_file(model_file)
-    # Retrieve parameters
-    parameters, _ = L2O.load_parameters(model)
     # No batch
     if isnothing(batch_size)
-        pairs = _dataframe_to_dict(df, parameters)
+        pairs = _dataframe_to_dict(df, model_file)
         return ProblemIterator(ids, pairs)
     end
     # Batch
     num_batches = ceil(Int, length(ids) / batch_size)
     idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
-    return [ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], parameters)) for i in 1:num_batches]
+    return [ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], model_file)) for i in 1:num_batches]
 end
 
 """
