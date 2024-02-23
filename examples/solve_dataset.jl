@@ -11,37 +11,36 @@ using Random
 
 @everywhere l2o_path = dirname(@__DIR__)
 
-@everywhere begin
-    import Pkg
+@everywhere import Pkg
 
-    Pkg.activate(l2o_path)
+@everywhere Pkg.activate(l2o_path)
 
-    Pkg.instantiate()
+@everywhere Pkg.instantiate()
 
-    ########## SCRIPT REQUIRED PACKAGES ##########
+########## SCRIPT REQUIRED PACKAGES ##########
 
-    using L2O
-    using UUIDs
-    import ParametricOptInterface as POI
-    using JuMP
-    using UUIDs
-    using Arrow
+@everywhere using L2O
+@everywhere using UUIDs
+@everywhere import ParametricOptInterface as POI
+@everywhere using JuMP
+@everywhere using UUIDs
+@everywhere using Arrow
 
-    ## SOLVER PACKAGES ##
+## SOLVER PACKAGES ##
 
-    using Gurobi
-    # using Ipopt
+@everywhere using Gurobi
+# @everywhere using Ipopt
 
-    POI_cached_optimizer() = Gurobi.Optimizer()
+@everywhere POI_cached_optimizer() = Gurobi.Optimizer()
 
-    filetype = ArrowFile
-end
+@everywhere filetype = ArrowFile
+
 
 ########## PARAMETERS ##########
-model_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_SOCWRConicPowerModel_POI_load.mof.json")
+model_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_SOCWRConicPowerModel_POI_load.mof.json") # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 input_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_POI_load_input_7f284054-d107-11ee-3fe9-09f5e129b1ad")
 
-save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/")
+save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/SOCWRConicPowerModel")
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
 processed_output_files = [file for file in readdir(save_path; join=true) if occursin(case_name, file)]
 ids = Vector(Arrow.Table(processed_output_files).id)
@@ -52,10 +51,12 @@ batch_size = 20
 problem_iterator_factory, num_batches = load(model_file, input_file, filetype; batch_size=batch_size, ignore_ids=ids)
 
 @sync @distributed for i in 1:num_batches
+    batch_id = uuid1()
     problem_iterator = problem_iterator_factory(i)
     set_optimizer(problem_iterator.model, () -> POI_cached_optimizer())
-    output_file = joinpath(save_path, "$(case_name)_output_$(uuid1())")
+    output_file = joinpath(save_path, "$(case_name)_output_$(batch_id)")
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
     @info "Solved $(length(successfull_solves)) problems"
+    compress_batch_arrow(save_path, batch_id, case_name)
 end

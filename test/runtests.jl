@@ -41,6 +41,7 @@ include(joinpath(test_dir, "samplers.jl"))
     test_inconvexhull()
 
     mktempdir() do path
+        test_compress_batch_arrow(path)
         model_file = "pglib_opf_case5_pjm_DCPPowerModel_POI_load.mof.json"
         @testset "Samplers saving on $filetype" for filetype in [ArrowFile, CSVFile]
             file_in, ids = test_general_sampler_file(model_file; cache_dir=path, filetype=filetype)

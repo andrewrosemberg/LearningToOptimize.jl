@@ -41,7 +41,8 @@ export ArrowFile,
     line_sampler,
     box_sampler,
     scaled_distribution_sampler,
-    general_sampler
+    general_sampler,
+    compress_batch_arrow
 
 include("datasetgen.jl")
 include("csvrecorder.jl")

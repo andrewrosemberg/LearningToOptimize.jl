@@ -59,6 +59,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
 
         if !input
             # save objective value
+            status = JuMP.termination_status(model)
             obj = if in(status, ACCEPTED_TERMINATION_STATUSES)
                 JuMP.objective_value(model)
             else
@@ -69,7 +70,6 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             time = JuMP.solve_time(model)
             write(f, ",$time")
             # save status
-            status = JuMP.termination_status(model)
             write(f, ",$status")
             # save primal status
             write(f, ",$primal_stat")
