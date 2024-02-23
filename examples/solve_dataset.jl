@@ -22,6 +22,9 @@ using Random
 @everywhere using L2O
 @everywhere using UUIDs
 @everywhere import ParametricOptInterface as POI
+@everywhere using JuMP
+@everywhere using UUIDs
+@everywhere using Arrow
 
 ## SOLVER PACKAGES ##
 
@@ -37,16 +40,18 @@ input_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_r
 
 save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/")
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
-batch_size = 200
+processed_output_files = [file for file in readdir(save_path; join=true) if occursin(case_name, file)]
+ids = Vector(Arrow.Table(processed_output_files).id)
+batch_size = 20
 
 ########## SOLVE ##########
 
-problem_iterator_factory, num_batches = load(model_file, input_file, filetype; batch_size=batch_size)
+problem_iterator_factory, num_batches = load(model_file, input_file, filetype; batch_size=batch_size, ignore_ids=ids)
 
 @sync @distributed for i in 1:num_batches
     problem_iterator = problem_iterator_factory(i)
     set_optimizer(problem_iterator.model, () -> POI_cached_optimizer())
-    output_file = joinpath(save_path, "$(case_name)_output_$(UUID())")
+    output_file = joinpath(save_path, "$(case_name)_output_$(uuid1())")
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
     @info "Solved $(length(successfull_solves)) problems"

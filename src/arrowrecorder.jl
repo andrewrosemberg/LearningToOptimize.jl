@@ -13,19 +13,25 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
     model = recorder.model
 
     status=JuMP.termination_status(model)
-    primal_status=JuMP.primal_status(model)
-    dual_status=JuMP.dual_status(model)
+    primal_stat=JuMP.primal_status(model)
+    dual_stat=JuMP.dual_status(model)
 
-    primal_values = if in(primal_status, DECISION_STATUS)
+    primal_values = if in(primal_stat, DECISION_STATUS)
         [[value.(p)] for p in recorder.primal_variables]
     else
         [[zeros(length(p))] for p in recorder.primal_variables]
     end
 
-    dual_values = if in(dual_status, DECISION_STATUS)
+    dual_values = if in(dual_stat, DECISION_STATUS)
         [[dual.(p)] for p in recorder.dual_variables]
     else
         [[zeros(length(p))] for p in recorder.dual_variables]
+    end
+
+    objective = if in(status, ACCEPTED_TERMINATION_STATUSES)
+        JuMP.objective_value(model)
+    else
+        0.0
     end
 
     df = (;
@@ -43,11 +49,11 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
         df = merge(
             df,
             (;
-                objective=[JuMP.objective_value(model)],
+                objective=[objective],
                 time=[JuMP.solve_time(model)],
                 status=[string(status)],
-                primal_status=[string(primal_status)],
-                dual_status=[string(dual_status)],
+                primal_status=[string(primal_stat)],
+                dual_status=[string(dual_stat)],
             ),
         )
     end

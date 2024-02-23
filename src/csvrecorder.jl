@@ -12,8 +12,8 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
     _filename = _filename * "." * string(CSVFile)
 
     model = recorder.model
-    primal_status=JuMP.primal_status(model)
-    dual_status=JuMP.dual_status(model)
+    primal_stat=JuMP.primal_status(model)
+    dual_stat=JuMP.dual_status(model)
 
     if !isfile(_filename)
         open(_filename, "w") do f
@@ -36,7 +36,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
     end
     open(_filename, "a") do f
         write(f, "$id")
-        if in(primal_status, DECISION_STATUS)
+        if in(primal_stat, DECISION_STATUS)
             for p in recorder.primal_variables
                 val = value.(p)
                 write(f, ",$val")
@@ -46,7 +46,7 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
                 write(f, ",0")
             end
         end
-        if in(dual_status, DECISION_STATUS)
+        if in(dual_stat, DECISION_STATUS)
             for p in recorder.dual_variables
                 val = dual.(p)
                 write(f, ",$val")
@@ -59,7 +59,11 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
 
         if !input
             # save objective value
-            obj = JuMP.objective_value(model)
+            obj = if in(status, ACCEPTED_TERMINATION_STATUSES)
+                JuMP.objective_value(model)
+            else
+                0.0
+            end
             write(f, ",$obj")
             # save solve time
             time = JuMP.solve_time(model)
@@ -68,9 +72,9 @@ function record(recorder::Recorder{CSVFile}, id::UUID; input=false)
             status = JuMP.termination_status(model)
             write(f, ",$status")
             # save primal status
-            write(f, ",$primal_status")
+            write(f, ",$primal_stat")
             # save dual status
-            write(f, ",$dual_status")
+            write(f, ",$dual_stat")
         end
         # end line
         write(f, "\n")
