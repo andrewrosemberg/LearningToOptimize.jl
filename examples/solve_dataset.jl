@@ -37,13 +37,17 @@ using Random
 
 
 ########## PARAMETERS ##########
-model_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_SOCWRConicPowerModel_POI_load.mof.json") # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
+model_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_ACPPowerModel_POI_load.mof.json") # ACPPowerModel SOCWRConicPowerModel DCPPowerModel
 input_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_POI_load_input_7f284054-d107-11ee-3fe9-09f5e129b1ad")
 
-save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/SOCWRConicPowerModel")
+save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/ACPPowerModel")
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
 processed_output_files = [file for file in readdir(save_path; join=true) if occursin(case_name, file)]
-ids = vcat([Vector(Arrow.Table(file).id) for file in processed_output_files]...)
+ids = if length(processed_output_files) == 0
+    UUID[]
+else
+    vcat([Vector(Arrow.Table(file).id) for file in processed_output_files]...)
+end
 batch_size = 200
 
 ########## SOLVE ##########
