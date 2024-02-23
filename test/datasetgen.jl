@@ -119,14 +119,18 @@ function test_load(model_file::AbstractString, input_file::AbstractString, ::Typ
     return nothing
 end
 
-function test_compress_batch_arrow(case_file_path::AbstractString=mktempdir(), batch_id::UUID=uuid1(), case_name::AbstractString="test"; keyword::AbstractString="output")
+function test_compress_batch_arrow(case_file_path::AbstractString=mktempdir(), case_name::AbstractString="test"; keyword::AbstractString="output")
     random_data = rand(10, 10)
     col_names = ["col_$(i)" for i in 1:10]
+    batch_ids = [string(uuid1()) for _ in 1:10]
     dfs = [DataFrame(random_data[i:i, :], col_names) for i in 1:10]
     for i in 1:10
-        Arrow.write(joinpath(case_file_path, "$(case_name)_$(keyword)_$(batch_id)_$(uuid1()).arrow"), dfs[i])
+        Arrow.write(joinpath(case_file_path, "$(case_name)_$(keyword)_$(batch_ids[i]).arrow"), dfs[i])
     end
-    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(string(batch_id), file)]) == 10
-    L2O.compress_batch_arrow(case_file_path, batch_id, case_name; keyword=keyword)
-    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(string(batch_id), file)]) == 1
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 10
+    batch_id = string(uuid1())
+    L2O.compress_batch_arrow(case_file_path, case_name; keyword_all=keyword, batch_id=batch_id, keyword_any=batch_ids)
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_id)]) == 0
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(batch_id, file)]) == 1
+    return nothing
 end

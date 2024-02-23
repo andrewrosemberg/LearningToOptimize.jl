@@ -44,7 +44,7 @@ save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/SOCWRC
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
 processed_output_files = [file for file in readdir(save_path; join=true) if occursin(case_name, file)]
 ids = Vector(Arrow.Table(processed_output_files).id)
-batch_size = 20
+batch_size = 200
 
 ########## SOLVE ##########
 
@@ -58,5 +58,5 @@ problem_iterator_factory, num_batches = load(model_file, input_file, filetype; b
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
     @info "Solved $(length(successfull_solves)) problems"
-    compress_batch_arrow(save_path, batch_id, case_name)
+    compress_batch_arrow(save_path, case_name; keyword_all="output", batch_id=string(batch_id), keyword_any=[string(batch_id)])
 end

@@ -70,15 +70,14 @@ function load(filename::String, ::Type{ArrowFile})
     return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
 end
 
-function compress_batch_arrow(case_file_path::String, batch_id::UUID, case_name::String; keyword="output")
-    batch_id = string(batch_id)
+function compress_batch_arrow(case_file_path::String, case_name::String; keyword_all="output", batch_id::String=string(uuid1()), keyword_any=["_"])
     iter_files = readdir(case_file_path; join=true)
     file_outs = [
-        file for file in iter_files if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(batch_id, file)
+        file for file in iter_files if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword_all, file) && any(x -> occursin(x, file), keyword_any)
     ]
     output_table = Arrow.Table(file_outs)
     Arrow.write(
-        joinpath(case_file_path, "$(case_name)_$(keyword)_" * batch_id * ".arrow"),
+        joinpath(case_file_path, "$(case_name)_$(keyword_all)_$(batch_id).arrow"),
         output_table,
     )
     for file in file_outs
