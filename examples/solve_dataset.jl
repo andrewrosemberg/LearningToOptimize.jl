@@ -11,30 +11,33 @@ using Random
 
 @everywhere l2o_path = dirname(@__DIR__)
 
-@everywhere import Pkg
+@everywhere begin
+    import Pkg
 
-@everywhere Pkg.activate(l2o_path)
+    Pkg.activate(l2o_path)
 
-@everywhere Pkg.instantiate()
+    Pkg.instantiate()
 
-########## SCRIPT REQUIRED PACKAGES ##########
+    ########## SCRIPT REQUIRED PACKAGES ##########
 
-@everywhere using L2O
-@everywhere using UUIDs
-@everywhere import ParametricOptInterface as POI
-@everywhere using JuMP
-@everywhere using UUIDs
-@everywhere using Arrow
+    using L2O
+    using UUIDs
+    import ParametricOptInterface as POI
+    using JuMP
+    using UUIDs
+    using Arrow
 
-## SOLVER PACKAGES ##
+    ## SOLVER PACKAGES ##
 
-@everywhere using Gurobi
-# @everywhere using Ipopt
+    using Gurobi
+    # using Ipopt
 
-POI_cached_optimizer() = Gurobi.Optimizer()
+    POI_cached_optimizer() = Gurobi.Optimizer()
+
+    filetype = ArrowFile
+end
 
 ########## PARAMETERS ##########
-filetype = ArrowFile
 model_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_SOCWRConicPowerModel_POI_load.mof.json")
 input_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_rte_POI_load_input_7f284054-d107-11ee-3fe9-09f5e129b1ad")
 
