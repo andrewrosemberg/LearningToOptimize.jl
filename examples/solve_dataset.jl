@@ -28,10 +28,10 @@ using Random
 
 ## SOLVER PACKAGES ##
 
-@everywhere using Gurobi
-# @everywhere using Ipopt
+# @everywhere using Gurobi
+@everywhere using Ipopt
 
-@everywhere POI_cached_optimizer() = Gurobi.Optimizer()
+@everywhere POI_cached_optimizer() = Ipopt.Optimizer()
 
 @everywhere filetype = ArrowFile
 
@@ -43,7 +43,7 @@ input_file = joinpath(l2o_path, "examples/powermodels/data/6468_rte/input/6468_r
 save_path = joinpath(l2o_path, "examples/powermodels/data/6468_rte/output/SOCWRConicPowerModel")
 case_name = split(split(model_file, ".mof.")[1], "/")[end]
 processed_output_files = [file for file in readdir(save_path; join=true) if occursin(case_name, file)]
-ids = Vector(Arrow.Table(processed_output_files).id)
+ids = vcat([Vector(Arrow.Table(file).id) for file in processed_output_files]...)
 batch_size = 200
 
 ########## SOLVE ##########
