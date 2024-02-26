@@ -9,7 +9,7 @@ cossim(x,y) = dot(x,y) / (norm(x)*norm(y))
 ##############
 # Parameters
 ##############
-network_formulation = "SOCWRConicPowerModel" # "DCPPowerModel" # "SOCWRConicPowerModel"
+network_formulation = "ACPPowerModel" # ACPPowerModel "DCPPowerModel" # "SOCWRConicPowerModel"
 case_name = "6468_rte" # pglib_opf_case300_ieee # 6468_rte 
 path_dataset = joinpath(dirname(@__FILE__), "data")
 case_file_path = joinpath(path_dataset, case_name)
@@ -45,6 +45,8 @@ output_table = Arrow.Table(file_outs)
 input_data_train = DataFrame(input_table_train)
 input_data_test = DataFrame(input_table_test)
 output_data = DataFrame(output_table)
+output_data.operational_cost = output_data.objective
+output_data = output_data[output_data.objective .> 10, :]
 input_data = vcat(input_data_train, input_data_test[!, Not(:in_train_convex_hull)])
 
 ##############
@@ -59,13 +61,13 @@ file_outs_soc = [
 ]
 output_table_soc = Arrow.Table(file_outs_soc)
 output_data_soc = DataFrame(output_table_soc)
-output_data_soc.operational_cost_soc = output_data_soc.operational_cost
-output_data_soc = output_data_soc[output_data_soc.operational_cost .> 10, :]
+output_data_soc.operational_cost_soc = output_data_soc.objective
+output_data_soc = output_data_soc[output_data_soc.objective .> 10, :]
 
 # compare SOC and AC operational_cost by id
 ac_soc = innerjoin(output_data[!, [:id, :operational_cost]], output_data_soc[!, [:id, :operational_cost_soc]], on=:id, makeunique=true)
 
-ac_soc.error = abs.(ac_soc.operational_cost .- ac_soc.operational_cost_soc) ./ ac_soc.operational_cost * 100
+ac_soc.error = (ac_soc.operational_cost .- ac_soc.operational_cost_soc) ./ ac_soc.operational_cost * 100
 mean(ac_soc.error)
 maximum(ac_soc.error)
 ac_soc[findmax(ac_soc.error)[2], :]
@@ -108,12 +110,12 @@ load_vector_train = total_load_vector(input_data_train)
 load_vector_test = total_load_vector(input_data_test; is_test=true)
 
 # Nominal Loads
-nominal_loads = Vector(load_vector_train[1, Not(:id)])
+nominal_loads = Vector(input_data_train[1, Not(:id)])
 norm_nominal_loads = norm(nominal_loads)
 
 # Load divergence
-theta_train = [acos(cossim(nominal_loads, Vector(load_vector_train[i, Not(:id)]))) for i in 2:size(load_vector_train, 1)] * 180 / pi
-norm_sim_train = [norm(Vector(load_vector_train[i, Not(:id)])) / norm_nominal_loads for i in 2:size(load_vector_train, 1)]
+theta_train = [acos(cossim(nominal_loads, Vector(input_data_train[i, Not(:id)]))) for i in 2:10000] * 180 / pi
+norm_sim_train = [norm(Vector(input_data_train[i, Not(:id)])) / norm_nominal_loads for i in 2:10000]
 
 theta_test = [acos(cossim(nominal_loads, Vector(load_vector_test[i, Not([:id, :in_hull])]))) for i in 1:size(load_vector_test, 1)] * 180 / pi
 norm_sim_test = [norm(Vector(load_vector_test[i, Not([:id, :in_hull])])) / norm_nominal_loads for i in 1:size(load_vector_test, 1)]

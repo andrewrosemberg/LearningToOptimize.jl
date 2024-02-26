@@ -30,8 +30,9 @@ using Random
 
 # @everywhere using Gurobi
 @everywhere using Ipopt
+# @everywhere using Clarabel
 
-@everywhere POI_cached_optimizer() = Ipopt.Optimizer()
+# @everywhere POI_cached_optimizer() = Clarabel.Optimizer()
 
 @everywhere filetype = ArrowFile
 
@@ -55,6 +56,17 @@ batch_size = 200
 problem_iterator_factory, num_batches = load(model_file, input_file, filetype; batch_size=batch_size, ignore_ids=ids)
 
 @sync @distributed for i in 1:num_batches
+    ipopt = Ipopt.Optimizer()
+    MOI.set(ipopt, MOI.RawOptimizerAttribute("print_level"), 0)
+    cached =
+        () -> MOI.Bridges.full_bridge_optimizer(
+            MOI.Utilities.CachingOptimizer(
+                MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+                ipopt,
+            ),
+            Float64,
+    )
+    POI_cached_optimizer() = POI.Optimizer(cached())
     batch_id = uuid1()
     problem_iterator = problem_iterator_factory(i)
     set_optimizer(problem_iterator.model, () -> POI_cached_optimizer())
@@ -62,5 +74,5 @@ problem_iterator_factory, num_batches = load(model_file, input_file, filetype; b
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
     @info "Solved $(length(successfull_solves)) problems"
-    compress_batch_arrow(save_path, case_name; keyword_all="output", batch_id=string(batch_id), keyword_any=[string(batch_id)])
+    L2O.compress_batch_arrow(save_path, case_name; keyword_all="output", batch_id=string(batch_id), keyword_any=[string(batch_id)])
 end
