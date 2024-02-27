@@ -15,14 +15,10 @@ using CSV
 using DataFrames
 using Optimisers
 
-using NonconvexNLopt
-
 const test_dir = dirname(@__FILE__)
 const examples_dir = joinpath(test_dir, "..", "examples")
 
 include(joinpath(test_dir, "datasetgen.jl"))
-
-include(joinpath(test_dir, "worst_case.jl"))
 
 include(joinpath(examples_dir, "powermodels", "pglib_datagen.jl"))
 
@@ -32,21 +28,27 @@ include(joinpath(test_dir, "nn_expression.jl"))
 
 include(joinpath(test_dir, "inconvexhull.jl"))
 
+include(joinpath(test_dir, "samplers.jl"))
+
 @testset "L2O.jl" begin
+    test_load_parameters_model()
+    test_load_parameters()
+    test_line_sampler()
+    test_box_sampler()
+    test_general_sampler()
     test_fully_connected()
     test_flux_jump_basic()
     test_inconvexhull()
 
     mktempdir() do path
+        test_compress_batch_arrow(path)
+        model_file = "pglib_opf_case5_pjm_DCPPowerModel_POI_load.mof.json"
+        @testset "Samplers saving on $filetype" for filetype in [ArrowFile, CSVFile]
+            file_in, ids = test_general_sampler_file(model_file; cache_dir=path, filetype=filetype)
+            test_load(model_file, file_in, filetype, ids)
+        end
         test_problem_iterator(path)
-        test_worst_case_problem_iterator(path)
         file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
-        file_in, file_out = test_generate_worst_case_dataset(
-            path, "pglib_opf_case5_pjm", 20
-        )
-        file_in, file_out = test_generate_worst_case_dataset_Nonconvex(
-            path, "pglib_opf_case5_pjm", 20
-        )
         test_flux_forecaster(file_in, file_out)
     end
 end

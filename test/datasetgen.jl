@@ -97,3 +97,40 @@ function test_problem_iterator(path::AbstractString)
         end
     end
 end
+
+function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}, ids::Vector{UUID};
+    batch_size::Integer=32
+) where {T<:L2O.FileType}
+    # Test Load full set 
+    problem_iterator = L2O.load(model_file, input_file, T)
+    @test problem_iterator isa L2O.AbstractProblemIterator
+    @test length(problem_iterator.ids) == length(ids)
+    # Test load only half of the ids
+    num_ids_ignored = floor(Int, length(ids) / 2)
+    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids[1:num_ids_ignored])
+    @test length(problem_iterator.ids) == length(ids) - num_ids_ignored
+    # Test warning all ids to be ignored
+    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids)
+    @test isnothing(problem_iterator)
+    # Test Load batch of problem iterators
+    problem_iterator_factory, num_batches =  L2O.load(model_file, input_file, T; batch_size=batch_size)
+    @test num_batches == ceil(Int, length(ids) / batch_size)
+    @test problem_iterator_factory(1) isa L2O.AbstractProblemIterator
+    return nothing
+end
+
+function test_compress_batch_arrow(case_file_path::AbstractString=mktempdir(), case_name::AbstractString="test"; keyword::AbstractString="output")
+    random_data = rand(10, 10)
+    col_names = ["col_$(i)" for i in 1:10]
+    batch_ids = [string(uuid1()) for _ in 1:10]
+    dfs = [DataFrame(random_data[i:i, :], col_names) for i in 1:10]
+    for i in 1:10
+        Arrow.write(joinpath(case_file_path, "$(case_name)_$(keyword)_$(batch_ids[i]).arrow"), dfs[i])
+    end
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 10
+    batch_id = string(uuid1())
+    L2O.compress_batch_arrow(case_file_path, case_name; keyword_all=keyword, batch_id=batch_id, keyword_any=batch_ids)
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 0
+    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(batch_id, file)]) == 1
+    return nothing
+end

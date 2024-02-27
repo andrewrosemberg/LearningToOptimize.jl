@@ -20,10 +20,15 @@ termination_status_filter(status) = in(status, ACCEPTED_TERMINATION_STATUSES)
 primal_status_filter(status) = in(status, DECISION_STATUS)
 dual_status_filter(status) = in(status, DECISION_STATUS)
 
-function filter_fn(model)
-    return termination_status_filter(termination_status(model)) &&
-           primal_status_filter(primal_status(model)) &&
-           dual_status_filter(dual_status(model))
+function filter_fn(model; check_primal=true, check_dual=true)
+    if !termination_status_filter(termination_status(model))
+        return false
+    elseif check_primal && !primal_status_filter(primal_status(model))
+        return false
+    elseif check_dual && !dual_status_filter(dual_status(model))
+        return false
+    end
+    return true
 end
 
 """
@@ -131,18 +136,67 @@ function ProblemIterator(
 end
 
 """
-    save(problem_iterator::ProblemIterator, filename::String, file_type::Type{T})
+    save(problem_iterator::ProblemIterator, filename::AbstractString, file_type::Type{T})
 
 Save optimization problem instances to a file.
 """
 function save(
-    problem_iterator::AbstractProblemIterator, filename::String, file_type::Type{T}
+    problem_iterator::AbstractProblemIterator, filename::AbstractString, file_type::Type{T}
 ) where {T<:FileType}
     kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
     df = (; id=problem_iterator.ids,)
     df = merge(df, (; zip(Symbol.(kys), [problem_iterator.pairs[ky] for ky in kys])...))
     save(df, filename, file_type)
     return nothing
+end
+
+function _dataframe_to_dict(df::DataFrame, parameters::Vector{VariableRef})
+    pairs = Dict{VariableRef,Vector{Float64}}()
+    for ky in names(df)
+        if ky != "id"
+            idx = findfirst(parameters) do p
+                name(p) == string(ky)
+            end
+            parameter = parameters[idx]
+            push!(pairs, parameter => df[!,ky])
+        end
+    end
+    return pairs
+end
+
+function _dataframe_to_dict(df::DataFrame, model_file::AbstractString)
+    # Load model
+    model = read_from_file(model_file)
+    # Retrieve parameters
+    parameters, _ = L2O.load_parameters(model)
+    return _dataframe_to_dict(df, parameters)
+end
+
+function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}; 
+    batch_size::Union{Nothing, Integer}=nothing,
+    ignore_ids::Vector{UUID}=UUID[]
+) where {T<:FileType}
+    # Load full set
+    df = load(input_file, T)
+    # Remove ignored ids
+    df.id = UUID.(df.id)
+    if !isempty(ignore_ids)
+        df = filter(:id => (id) -> !(id in ignore_ids), df)
+        if isempty(df)
+            @warn("All ids are ignored")
+            return nothing
+        end
+    end
+    ids = df.id
+    # No batch
+    if isnothing(batch_size)
+        pairs = _dataframe_to_dict(df, model_file)
+        return ProblemIterator(ids, pairs)
+    end
+    # Batch
+    num_batches = ceil(Int, length(ids) / batch_size)
+    idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
+    return (i) -> ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], model_file)), num_batches
 end
 
 """

@@ -1,3 +1,5 @@
+using NonconvexNLopt
+
 """
     test_worst_case_problem_iterator(path::AbstractString)
 
@@ -180,3 +182,14 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         end
     end
 end
+
+####### Run Tests
+path = mktempdir()
+test_worst_case_problem_iterator(path)
+file_in, file_out = test_generate_worst_case_dataset(
+    path, "pglib_opf_case5_pjm", 20
+)
+file_in, file_out = test_generate_worst_case_dataset_Nonconvex(
+    path, "pglib_opf_case5_pjm", 20
+)
+

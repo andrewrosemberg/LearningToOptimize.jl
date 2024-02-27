@@ -40,33 +40,33 @@ function load_sampler(
     return load_samples
 end
 
-"""
-    line_sampler(original_parameter::T, num_p::Int, parameter_index::F, num_inputs::F, line_index::F; step_multiplier::T=0.1)
+# """
+#     line_sampler(original_parameter::T, num_p::Int, parameter_index::F, num_inputs::F, line_index::F; step_multiplier::T=0.1)
 
-line_sampler is a function to help generate a dataset for varying parameter values. It has two modes:
- - If line_index is not outside the parameter index range: 
-    Return an incremental vector for the parameter at parameter_index and an unchanged parameter for the rest;
- - If line_index is outside the parameter index range:
-    Return an incremental vector for all parameters. 
-"""
-function line_sampler(
-    original_parameter::T,
-    num_p::F,
-    parameter_index::F,
-    num_inputs::F,
-    line_index::F;
-    step_multiplier::T=1.01,
-) where {T<:Real,F<:Integer}
-    # parameter sampling
-    num_parameters = floor(Int, num_inputs / 2)
-    if (parameter_index == line_index) ||
-        (parameter_index - num_parameters == line_index) ||
-        (line_index == num_inputs + 1)
-        return [original_parameter * step_multiplier^(j) for j in 1:num_p]
-    else
-        return ones(num_p) * original_parameter
-    end
-end
+# line_sampler is a function to help generate a dataset for varying parameter values. It has two modes:
+#  - If line_index is not outside the parameter index range: 
+#     Return an incremental vector for the parameter at parameter_index and an unchanged parameter for the rest;
+#  - If line_index is outside the parameter index range:
+#     Return an incremental vector for all parameters. 
+# """
+# function line_sampler(
+#     original_parameter::T,
+#     num_p::F,
+#     parameter_index::F,
+#     num_inputs::F,
+#     line_index::F;
+#     step_multiplier::T=1.01,
+# ) where {T<:Real,F<:Integer}
+#     # parameter sampling
+#     num_parameters = floor(Int, num_inputs / 2)
+#     if (parameter_index == line_index) ||
+#         (parameter_index - num_parameters == line_index) ||
+#         (line_index == num_inputs + 1)
+#         return [original_parameter * step_multiplier^(j) for j in 1:num_p]
+#     else
+#         return ones(num_p) * original_parameter
+#     end
+# end
 
 """
     load_parameter_factory(model, indices; load_set=nothing)
@@ -77,7 +77,9 @@ function load_parameter_factory(model, indices; load_set=nothing)
     if isnothing(load_set)
         return @variable(model, _p[i=indices])
     end
-    return @variable(model, _p[i=indices] in load_set)
+    num_loads = floor(Int,length(indices) / 2)
+    pd_index = indices[1:num_loads]
+    return [@variable(model, pd[i=pd_index] in load_set[i]).data; @variable(model, qd[i=pd_index] in load_set[i+num_loads]).data]
 end
 
 """

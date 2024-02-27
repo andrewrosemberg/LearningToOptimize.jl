@@ -2,15 +2,15 @@ module L2O
 
 using Arrow
 using CSV
-using Dualization
+using DataFrames
 using JuMP
 using UUIDs
 import ParametricOptInterface as POI
 import JuMP.MOI as MOI
 import Base: string
 using Statistics
+using Distributions
 
-using Nonconvex
 using Zygote
 
 using MLJFlux
@@ -25,8 +25,8 @@ export ArrowFile,
     ProblemIterator,
     Recorder,
     save,
+    load,
     solve_batch,
-    WorstCaseProblemIterator,
     set_primal_variable!,
     set_dual_variable!,
     set_model!,
@@ -37,16 +37,20 @@ export ArrowFile,
     ConvexRule,
     relative_rmse,
     relative_mae,
-    inconvexhull
+    inconvexhull,
+    line_sampler,
+    box_sampler,
+    scaled_distribution_sampler,
+    general_sampler,
+    compress_batch_arrow
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
 include("arrowrecorder.jl")
-include("worst_case.jl")
-include("worst_case_iter.jl")
 include("FullyConnected.jl")
 include("nn_expression.jl")
 include("metrics.jl")
 include("inconvexhull.jl")
+include("samplers.jl")
 
 end

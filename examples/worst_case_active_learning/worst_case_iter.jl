@@ -1,3 +1,5 @@
+using Nonconvex
+
 # Nonconvex needs a minimization objective function that only receives the decision vector.
 function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
     model = owner_model(first(parameters))
