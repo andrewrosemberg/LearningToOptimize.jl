@@ -77,7 +77,7 @@ pdual(vs::Vector{VariableRef}) = [pdual(v) for v in vs]
 function rrule(::typeof(simulate_stage), subproblem, state_param_in, state_param_out, uncertainty, state_in, state_out)
     y = simulate_stage(subproblem, state_param_in, state_param_out, uncertainty, state_in, state_out)
     function _pullback(Δy)
-        return (NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), pdual.(state_params_in) * Δy, pdual.(state_params_out) * Δy)
+        return (NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), pdual.(state_param_in) * Δy, pdual.(state_param_out) * Δy)
     end
     return y, _pullback
 end
@@ -95,19 +95,20 @@ function train_multistage(model, initial_state, subproblems, state_params_in, st
     for _ in 1:num_train_samples
         # Sample uncertainties
         uncertainty_sample = sample(uncertainty_samples)
+        uncertainty_sample_vec = [collect(values(uncertainty_sample[j])) for j in 1:length(uncertainty_sample)]
 
         # Calculate the gradient of the objective
         # with respect to the parameters within the model:
+        model.state .= initial_state # Reset the state of the model
         grads = Flux.gradient(model) do m
             objective = 0.0
-            for (i, subproblem) in enumerate(subproblems)
+            for (j, subproblem) in enumerate(subproblems)
                 state_in = initial_state
-                for j in 1:i
-                    state_out = m(collect(values(uncertainty_sample[j])))
-                    objective += simulate_stage(subproblem, state_params_in[j], state_params_out[j], uncertainty_sample[j], state_in, state_out)
-                    state_in = state_out
-                end
+                state_out = m(uncertainty_sample_vec[j])
+                objective += simulate_stage(subproblem, state_params_in[j], state_params_out[j], uncertainty_sample[j], state_in, state_out)
+                state_in = state_out
             end
+            return objective
         end
 
         # Update the parameters so as to reduce the objective,
