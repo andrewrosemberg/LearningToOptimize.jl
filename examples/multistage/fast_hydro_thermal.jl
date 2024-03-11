@@ -3,6 +3,7 @@ include("./examples/multistage/simulate_multistage.jl")
 
 function fast_hydro_thermal_subproblem()
     sp = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
+    set_silent(sp)
     state_param_out =  @variable(sp, state_param_out in MOI.Parameter(1.0))
     state_param_in = @variable(sp, state_param_in in MOI.Parameter(1.0))
     @variables(sp, begin # recourse variables
@@ -55,11 +56,16 @@ end
 
 # Test
 using Statistics
+using Random
 
+Random.seed!(333)
 model = RNN(1 => 1)
 objective_values = test_simulate_multistage(model)
 mean(objective_values)
 
-train_multistage(model, [0.0], build_fast_hydro_thermal_multistage()...)
-objective_values_after_train = test_simulate_multistage(model)
-mean(objective_values_after_train)
+for epoch in 1:3
+    train_multistage(model, [0.0], build_fast_hydro_thermal_multistage()...; num_train_samples=1000)
+    Random.seed!(333)
+    objective_values_after_train = test_simulate_multistage(model)
+    println(mean(objective_values_after_train))
+end
