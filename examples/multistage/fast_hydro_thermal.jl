@@ -33,7 +33,7 @@ function build_fast_hydro_thermal_multistage(; num_stages=2)
     return subproblems, state_params_in, state_params_out, uncertainty_samples
 end
 
-function test_simulate_multistage(model = Dense(2, 1); num_samples=10)
+function test_simulate_multistage(model = RNN(1 => 1, [0.0]); num_samples=10)
     subproblems, state_params_in, state_params_out, uncertainty_samples = build_fast_hydro_thermal_multistage()
     initial_state = [0.0]
     objective_values = Array{Float64}(undef, num_samples)
@@ -54,7 +54,7 @@ end
 
 using ChainRulesTestUtils
 
-function test_rrule_simulate_multistage(model = Dense(2, 1))
+function test_rrule_simulate_multistage(model = RNN(1 => 1, [0.0]))
     subproblems, state_params_in, state_params_out, uncertainty_samples = build_fast_hydro_thermal_multistage()
     initial_state = [0.0]
     test_rrule(simulate_multistage,
@@ -70,4 +70,4 @@ using Statistics
 objective_values = test_simulate_multistage()
 mean(objective_values)
 
-train_multistage(Dense(2, 1), [0.0], build_fast_hydro_thermal_multistage()...)
+train_multistage(RNN(1 => 1, [0.0]), [0.0], build_fast_hydro_thermal_multistage()...)

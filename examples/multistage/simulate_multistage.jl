@@ -17,9 +17,33 @@ function simulate_states(
     for stage in 1:num_stages
         uncertainties_stage = uncertainties[stage]
         decision_rule = decision_rules[stage]
-        states[stage + 1] = decision_rule([states[stage]; collect(values(uncertainties_stage))])
+        states[stage + 1] = decision_rule(collect(values(uncertainties_stage)))
     end
     return states
+end
+
+function simulate_stage(subproblem::JuMP.Model, state_param_in::Vector{VariableRef}, state_param_out::Vector{VariableRef}, uncertainty::Dict{VariableRef, T}, state_in::Vector{Z}, state_out::Vector{V}
+) where {T <: Real, V <: Real, Z <: Real}
+    # Update state parameters
+    for (i, state_var) in enumerate(state_param_in)
+        MOI.set(subproblem, POI.ParameterValue(), state_var, state_in[i])
+    end
+
+    # Update uncertainty
+    for (uncertainty_param, uncertainty_value) in uncertainty
+        MOI.set(subproblem, POI.ParameterValue(), uncertainty_param, uncertainty_value)
+    end
+
+    # Update state parameters out
+    for (i, state_var) in enumerate(state_param_out)
+        MOI.set(subproblem, POI.ParameterValue(), state_var, state_out[i])
+    end
+
+    # Solve subproblem
+    optimize!(subproblem)
+
+    # Return objective value
+    return JuMP.objective_value(subproblem)
 end
 
 function simulate_multistage(
@@ -35,32 +59,11 @@ function simulate_multistage(
     for stage in 1:length(subproblems)
         state_in = states[stage]
         state_out = states[stage + 1]
-        # Get subproblem
         subproblem = subproblems[stage]
-        
-        # Update state parameters
         state_param_in = state_params_in[stage]
-        for (i, state_var) in enumerate(state_param_in)
-            MOI.set(subproblem, POI.ParameterValue(), state_var, state_in[i])
-        end
-        
-        # Update uncertainty
-        uncertainties_stage = uncertainties[stage]
-        for (uncertainty_param, uncertainty_value) in uncertainties_stage
-            MOI.set(subproblem, POI.ParameterValue(), uncertainty_param, uncertainty_value)
-        end
-        
-        # Update state parameters out
         state_param_out = state_params_out[stage]
-        for (i, state_var) in enumerate(state_param_out)
-            MOI.set(subproblem, POI.ParameterValue(), state_var, state_out[i])
-        end
-        
-        # Solve subproblem
-        optimize!(subproblem)
-
-        # Update objective value
-        objective_value += JuMP.objective_value(subproblem) 
+        uncertainty = uncertainties[stage]
+        objective_value += simulate_stage(subproblem, state_param_in, state_param_out, uncertainty, state_in, state_out)
     end
     
     # Return final objective value
@@ -71,11 +74,10 @@ pdual(v::VariableRef) = MOI.get(JuMP.owner_model(v), POI.ParameterDual(), v)
 pdual(vs::Vector{VariableRef}) = [pdual(v) for v in vs]
 
 # Define rrule of simulate_multistage
-function rrule(::typeof(simulate_multistage), subproblems, state_params_in, state_params_out, states, uncertainties)
-    y = simulate_multistage(subproblems, state_params_in, state_params_out, states, uncertainties)
+function rrule(::typeof(simulate_stage), subproblem, state_param_in, state_param_out, uncertainty, state_in, state_out)
+    y = simulate_stage(subproblem, state_param_in, state_param_out, uncertainty, state_in, state_out)
     function _pullback(Δy)
-        pull_back_model = pdual.(state_params_in).+pdual.(state_params_out) * Δy
-        return (NoTangent(), NoTangent(), NoTangent(), NoTangent(), pull_back_model, NoTangent())
+        return (NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), pdual.(state_params_in) * Δy, pdual.(state_params_out) * Δy)
     end
     return y, _pullback
 end
@@ -87,7 +89,6 @@ end
 sample(uncertainty_samples::Vector{Dict{VariableRef, Vector{Float64}}}) = [sample(uncertainty_samples[t]) for t in 1:length(uncertainty_samples)]
 
 function train_multistage(model, initial_state, subproblems, state_params_in, state_params_out, uncertainty_samples; num_train_samples=100, optimizer=Flux.Adam(0.01))
-    num_stages = length(subproblems)
     # Initialise the optimiser for this model:
     opt_state = Flux.setup(optimizer, model)
 
@@ -97,19 +98,16 @@ function train_multistage(model, initial_state, subproblems, state_params_in, st
 
         # Calculate the gradient of the objective
         # with respect to the parameters within the model:
-        models = Vector{Any}(undef, num_stages)
         grads = Flux.gradient(model) do m
+            objective = 0.0
             for (i, subproblem) in enumerate(subproblems)
-                models[i] = m
+                state_in = initial_state
+                for j in 1:i
+                    state_out = m(collect(values(uncertainty_sample[j])))
+                    objective += simulate_stage(subproblem, state_params_in[j], state_params_out[j], uncertainty_sample[j], state_in, state_out)
+                    state_in = state_out
+                end
             end
-            states = simulate_states(
-                initial_state, uncertainty_sample, 
-                models
-            )
-            simulate_multistage(
-                subproblems, state_params_in, state_params_out, states, 
-                uncertainty_sample
-            )
         end
 
         # Update the parameters so as to reduce the objective,
