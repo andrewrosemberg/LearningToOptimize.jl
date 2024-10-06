@@ -124,26 +124,29 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     pairs::Dict{VariableRef,Vector{T}}
     early_stop::Function
     param_type::Type{<:AbstractParameterType}
+    pre_solve_hook::Function
     function ProblemIterator(
         ids::Vector{UUID},
         pairs::Dict{VariableRef,Vector{T}},
         early_stop::Function=(args...) -> false,
         param_type::Type{<:AbstractParameterType}=POIParamaterType,
+        pre_solve_hook::Function=(args...) -> nothing
     ) where {T<:Real}
         model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
             @assert length(ids) == length(val)
         end
-        return new{T}(model, ids, pairs, early_stop, param_type)
+        return new{T}(model, ids, pairs, early_stop, param_type, pre_solve_hook)
     end
 end
 
 function ProblemIterator(
     pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false,
+    pre_solve_hook::Function=(args...) -> nothing,
     param_type::Type{<:AbstractParameterType}=POIParamaterType,
     ids = [uuid1() for _ in 1:length(first(values(pairs)))]
 ) where {T<:Real}
-    return ProblemIterator(ids, pairs, early_stop, param_type)
+    return ProblemIterator(ids, pairs, early_stop, param_type, pre_solve_hook)
 end
 
 """
@@ -249,6 +252,7 @@ function solve_and_record(
     problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer
 )
     model = problem_iterator.model
+    problem_iterator.pre_solve_hook(model)
     update_model!(model, problem_iterator.pairs, idx, problem_iterator.param_type)
     optimize!(model)
     status = recorder.filterfn(model)

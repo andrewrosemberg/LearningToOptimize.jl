@@ -55,6 +55,17 @@ function test_problem_iterator(path::AbstractString)
             @test num_p * successfull_solves == 1
         end
 
+        @testset "pre_solve_hook" begin
+            file_dual_output = joinpath(path, "test_$(string(uuid1()))_output") # file path
+            recorder_dual = Recorder{filetype}(file_dual_output; dual_variables=[cons])
+            sum_p = 0
+            problem_iterator = ProblemIterator(
+                Dict(p => collect(1.0:num_p)); pre_solve_hook=(args...) -> sum_p += 1
+            )
+            successfull_solves = solve_batch(problem_iterator, recorder_dual)
+            @test sum_p == num_p
+        end
+
         @testset "solve_batch" begin
             successfull_solves = solve_batch(problem_iterator, recorder)
 
@@ -105,6 +116,32 @@ function test_problem_iterator(path::AbstractString)
         num_p = 10
         batch_id = string(uuid1())
         problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=L2O.JuMPParameterType)
+        file_output = joinpath(path, "test_$(batch_id)_output") # file path
+        recorder = Recorder{ArrowFile}(
+            file_output; primal_variables=[x], dual_variables=[cons]
+        )
+        successfull_solves = solve_batch(problem_iterator, recorder)
+        iter_files = readdir(joinpath(path))
+        iter_files = filter(x -> occursin(string(ArrowFile), x), iter_files)
+        file_outs = [
+            joinpath(path, file) for
+            file in iter_files if occursin("$(batch_id)_output", file)
+        ]
+        # test output file
+        df = Arrow.Table(file_outs)
+        @test length(df) == 8
+        @test length(df[1]) == num_p * successfull_solves
+        rm.(file_outs)
+    end
+    @testset "Dataset Generation JuMPNLP" begin
+        model = JuMP.Model(Ipopt.Optimizer)
+        @variable(model, x)
+        p = @variable(model, _p in MOI.Parameter(1.0))
+        @constraint(model, cons, x + _p >= 3)
+        @objective(model, Min, 2x)
+        num_p = 10
+        batch_id = string(uuid1())
+        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=L2O.JuMPNLPParameterType)
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         recorder = Recorder{ArrowFile}(
             file_output; primal_variables=[x], dual_variables=[cons]
