@@ -1,7 +1,7 @@
 name = "L2O"
 uuid = "e1d8bfa7-c465-446a-84b9-451470f6e76c"
 authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
-version = "1.2.0-DEV"
+version = "1.0.0"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
