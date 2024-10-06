@@ -5,7 +5,7 @@
 Test dataset generation for different filetypes
 """
 function test_problem_iterator(path::AbstractString)
-    @testset "Dataset Generation Type: $filetype" for filetype in [CSVFile, ArrowFile]
+    @testset "Dataset Generation (POI) Type: $filetype" for filetype in [CSVFile, ArrowFile]
         # The problem to iterate over
         model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
         @variable(model, x)
@@ -95,6 +95,32 @@ function test_problem_iterator(path::AbstractString)
                 rm.(file_outs)
             end
         end
+    end
+    @testset "Dataset Generation JuMP" begin
+        model = JuMP.Model(HiGHS.Optimizer)
+        @variable(model, x)
+        p = @variable(model, _p)
+        @constraint(model, cons, x + _p >= 3)
+        @objective(model, Min, 2x)
+        num_p = 10
+        batch_id = string(uuid1())
+        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=L2O.JuMPParameterType)
+        file_output = joinpath(path, "test_$(batch_id)_output") # file path
+        recorder = Recorder{ArrowFile}(
+            file_output; primal_variables=[x], dual_variables=[cons]
+        )
+        successfull_solves = solve_batch(problem_iterator, recorder)
+        iter_files = readdir(joinpath(path))
+        iter_files = filter(x -> occursin(string(ArrowFile), x), iter_files)
+        file_outs = [
+            joinpath(path, file) for
+            file in iter_files if occursin("$(batch_id)_output", file)
+        ]
+        # test output file
+        df = Arrow.Table(file_outs)
+        @test length(df) == 8
+        @test length(df[1]) == num_p * successfull_solves
+        rm.(file_outs)
     end
 end
 

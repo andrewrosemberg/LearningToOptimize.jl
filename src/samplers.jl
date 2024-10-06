@@ -119,7 +119,7 @@ end
 Load the parameters from a JuMP model.
 """
 function load_parameters(model::JuMP.Model)
-    cons = constraint_object.(all_constraints(model, VariableRef, MOI.Parameter{Float64}))
+    cons = constraint_object.([all_constraints(model, VariableRef, MOI.Parameter{Float64}); all_constraints(model, VariableRef, MOI.EqualTo{Float64})])
     parameters = [cons[i].func for i in 1:length(cons)]
     vals = [cons[i].set.value for i in 1:length(cons)]
     return parameters, vals

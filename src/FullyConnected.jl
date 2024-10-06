@@ -66,12 +66,18 @@ end
 # @forward((ConvexRegressor, :model), MLJFlux.Regressor)
 
 # Define a container to hold any optimiser specific parameters (if any):
-struct ConvexRule <: Flux.Optimise.AbstractOptimiser
-    rule::Flux.Optimise.AbstractOptimiser
+struct ConvexRule <: Optimisers.AbstractRule
+    rule::Optimisers.AbstractRule
     tol::Real
 end
-function ConvexRule(rule::Flux.Optimise.AbstractOptimiser; tol=1e-6)
+function ConvexRule(rule::Optimisers.AbstractRule; tol=1e-6)
     return ConvexRule(rule, tol)
+end
+
+Optimisers.init(o::ConvexRule, x::AbstractArray) = Optimisers.init(o.rule, x)
+
+function Optimisers.apply!(o::ConvexRule, mvel, x::AbstractArray{T}, dx) where T
+    return Optimisers.apply!(o.rule, mvel, x, dx)
 end
 
 """
@@ -102,24 +108,48 @@ function make_convex!(model::Chain; tol=1e-6)
     end
 end
 
-function MLJFlux.train!(
-    model::MLJFlux.MLJFluxDeterministic, penalty, chain, optimiser::ConvexRule, X, y
-)
+function MLJFlux.train(
+    model,
+    chain,
+    optimiser::ConvexRule,
+    optimiser_state,
+    epochs,
+    verbosity,
+    X,
+    y,
+    )
+
     loss = model.loss
+
+    # intitialize and start progress meter:
+    meter = MLJFlux.Progress(epochs + 1, dt=0, desc="Optimising neural net:",
+        barglyphs=MLJFlux.BarGlyphs("[=> ]"), barlen=25, color=:yellow)
+    verbosity != 1 || MLJFlux.next!(meter)
+
+    # initiate history:
     n_batches = length(y)
-    training_loss = zero(Float32)
-    for i in 1:n_batches
-        parameters = Flux.params(chain)
-        gs = Flux.gradient(parameters) do
-            yhat = chain(X[i])
-            batch_loss = loss(yhat, y[i]) + penalty(parameters) / n_batches
-            training_loss += batch_loss
-            return batch_loss
-        end
-        Flux.update!(optimiser.rule, parameters, gs)
+
+    losses = (loss(chain(X[i]), y[i]) for i in 1:n_batches)
+    history = [mean(losses),]
+
+    for i in 1:epochs
+        chain, optimiser_state, current_loss = MLJFlux.train_epoch(
+            model,
+            chain,
+            optimiser,
+            optimiser_state,
+            X,
+            y,
+        )
         make_convex!(chain; tol=optimiser.tol)
+        verbosity < 2 ||
+            @info "Loss is $(round(current_loss; sigdigits=4))"
+        verbosity != 1 || next!(meter)
+        push!(history, current_loss)
     end
-    return training_loss / n_batches
+
+    return chain, optimiser_state, history
+
 end
 
 function train!(model, loss, opt_state, X, Y; _batchsize=32, shuffle=true)

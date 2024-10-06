@@ -21,7 +21,7 @@ function test_flux_forecaster(file_in::AbstractString, file_out::AbstractString)
             rng=123,
             epochs=20,
             optimiser=ConvexRule(
-                Flux.Optimise.Adam(0.001, (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+                Optimisers.Adam()
             ),
         )
 

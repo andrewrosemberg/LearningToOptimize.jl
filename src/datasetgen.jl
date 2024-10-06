@@ -105,6 +105,14 @@ end
 
 abstract type AbstractProblemIterator end
 
+abstract type AbstractParameterType end
+
+abstract type POIParamaterType <: AbstractParameterType end
+
+abstract type JuMPNLPParameterType <: AbstractParameterType end
+
+abstract type JuMPParameterType <: AbstractParameterType end
+
 """
     ProblemIterator(ids::Vector{UUID}, pairs::Dict{VariableRef, Vector{Real}})
 
@@ -115,24 +123,27 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     ids::Vector{UUID}
     pairs::Dict{VariableRef,Vector{T}}
     early_stop::Function
+    param_type::Type{<:AbstractParameterType}
     function ProblemIterator(
         ids::Vector{UUID},
         pairs::Dict{VariableRef,Vector{T}},
         early_stop::Function=(args...) -> false,
+        param_type::Type{<:AbstractParameterType}=POIParamaterType,
     ) where {T<:Real}
         model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
             @assert length(ids) == length(val)
         end
-        return new{T}(model, ids, pairs, early_stop)
+        return new{T}(model, ids, pairs, early_stop, param_type)
     end
 end
 
 function ProblemIterator(
-    pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false
-) where {T<:Real}
+    pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false,
+    param_type::Type{<:AbstractParameterType}=POIParamaterType,
     ids = [uuid1() for _ in 1:length(first(values(pairs)))]
-    return ProblemIterator(ids, pairs, early_stop)
+) where {T<:Real}
+    return ProblemIterator(ids, pairs, early_stop, param_type)
 end
 
 """
@@ -174,7 +185,8 @@ end
 
 function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}; 
     batch_size::Union{Nothing, Integer}=nothing,
-    ignore_ids::Vector{UUID}=UUID[]
+    ignore_ids::Vector{UUID}=UUID[],
+    param_type::Type{<:AbstractParameterType}=JuMPParameterType
 ) where {T<:FileType}
     # Load full set
     df = load(input_file, T)
@@ -191,12 +203,13 @@ function load(model_file::AbstractString, input_file::AbstractString, ::Type{T};
     # No batch
     if isnothing(batch_size)
         pairs = _dataframe_to_dict(df, model_file)
-        return ProblemIterator(ids, pairs)
+        return ProblemIterator(pairs; ids=ids, param_type=param_type)
     end
     # Batch
     num_batches = ceil(Int, length(ids) / batch_size)
     idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
-    return (i) -> ProblemIterator(ids[idx_range(i)], _dataframe_to_dict(df[idx_range(i), :], model_file)), num_batches
+    return (i) -> ProblemIterator(_dataframe_to_dict(df[idx_range(i), :], model_file);
+        ids=ids[idx_range(i)], param_type=param_type), num_batches
 end
 
 """
@@ -204,8 +217,16 @@ end
 
 Update the value of a parameter in a JuMP model.
 """
-function update_model!(model::JuMP.Model, p::VariableRef, val)
+function update_model!(::Type{POIParamaterType}, model::JuMP.Model, p::VariableRef, val)
     return MOI.set(model, POI.ParameterValue(), p, val)
+end
+
+function update_model!(::Type{JuMPNLPParameterType}, model::JuMP.Model, p::VariableRef, val)
+    return set_parameter_value(p, val)
+end
+
+function update_model!(::Type{JuMPParameterType}, model::JuMP.Model, p::VariableRef, val)
+    return fix(p, val)
 end
 
 """
@@ -213,9 +234,9 @@ end
 
 Update the values of parameters in a JuMP model.
 """
-function update_model!(model::JuMP.Model, pairs::Dict, idx::Integer)
+function update_model!(model::JuMP.Model, pairs::Dict, idx::Integer, param_type::Type{<:AbstractParameterType})
     for (p, val) in pairs
-        update_model!(model, p, val[idx])
+        update_model!(param_type, model, p, val[idx])
     end
 end
 
@@ -228,7 +249,7 @@ function solve_and_record(
     problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer
 )
     model = problem_iterator.model
-    update_model!(model, problem_iterator.pairs, idx)
+    update_model!(model, problem_iterator.pairs, idx, problem_iterator.param_type)
     optimize!(model)
     status = recorder.filterfn(model)
     early_stop_bool = problem_iterator.early_stop(model, status, recorder)
