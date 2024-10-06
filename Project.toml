@@ -1,7 +1,7 @@
 name = "L2O"
 uuid = "e1d8bfa7-c465-446a-84b9-451470f6e76c"
 authors = ["andrewrosemberg <andrewrosemberg@gmail.com> and contributors"]
-version = "1.2.0-DEV"
+version = "1.0.0"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
@@ -21,12 +21,12 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-Arrow = "2"
-CSV = "0.10"
-JuMP = "1"
-ParametricOptInterface = "0.7"
+Arrow = "^2"
+CSV = "^0.10"
+JuMP = "^1"
+ParametricOptInterface = "^0.8"
 Zygote = "^0.6.68"
-julia = "1.6"
+julia = "^1.9"
 
 [extras]
 CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
