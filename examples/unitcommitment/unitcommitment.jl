@@ -9,7 +9,7 @@
 # using MLJFlux
 using Flux
 # using MLJ
-# using L2O
+# using LearningToOptimize
 # using CUDA
 # using Wandb
 using DataFrames

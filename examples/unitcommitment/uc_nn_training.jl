@@ -8,7 +8,7 @@
 
 import Pkg; Pkg.activate(dirname(dirname(@__DIR__))); Pkg.instantiate()
 
-using L2O
+using LearningToOptimize
 using MLJFlux
 using CUDA # if error run CUDA.set_runtime_version!(v"12.1.0")
 using Flux

@@ -19,7 +19,7 @@ using Random
 
 ########## SCRIPT REQUIRED PACKAGES ##########
 
-@everywhere using L2O
+@everywhere using LearningToOptimize
 @everywhere using Arrow
 @everywhere using Test
 @everywhere using UUIDs

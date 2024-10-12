@@ -1,4 +1,4 @@
-using L2O
+using LearningToOptimize
 
 general_sampler(
     "examples/powermodels/data/6468_rte/6468_rte_SOCWRConicPowerModel_POI_load.mof.json";

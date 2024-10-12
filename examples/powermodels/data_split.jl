@@ -15,7 +15,7 @@ using Random
 @everywhere Pkg.activate(dirname(dirname(@__DIR__)))
 @everywhere Pkg.instantiate()
 @everywhere using DataFrames
-@everywhere using L2O
+@everywhere using LearningToOptimize
 @everywhere using Gurobi
 @everywhere using Arrow
 @everywhere using MLUtils

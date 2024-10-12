@@ -1,7 +1,7 @@
 function test_line_sampler(; num_p=10, range_p = 1:0.01:1.1)
     original_parameter = rand(num_p)
     for parameter_index = 1:num_p
-        parameters = L2O.line_sampler(
+        parameters = LearningToOptimize.line_sampler(
             original_parameter,
             [parameter_index],
             range_p,
@@ -9,7 +9,7 @@ function test_line_sampler(; num_p=10, range_p = 1:0.01:1.1)
         @test parameters[parameter_index, 1] == original_parameter[parameter_index]
         @test parameters[parameter_index, :] == [original_parameter[parameter_index] * mul for mul in range_p]
     end
-    parameters = L2O.line_sampler(
+    parameters = LearningToOptimize.line_sampler(
         original_parameter,
         range_p,
     )
@@ -47,7 +47,7 @@ function test_load_parameters_model(;num_p=10, num_v=5)
     @constraint(model, cons, sum(x) + sum(p) >= 3)
     @objective(model, Min, 2x)
 
-    parameters, vals = L2O.load_parameters(model)
+    parameters, vals = LearningToOptimize.load_parameters(model)
     @test length(parameters) == num_p
     @test length(vals) == num_p
     @test all(vals .== 1.0)
@@ -57,7 +57,7 @@ end
 
 function test_load_parameters()
     file="pglib_opf_case5_pjm_DCPPowerModel_POI_load.mof.json"
-    parameters, vals = L2O.load_parameters(file)
+    parameters, vals = LearningToOptimize.load_parameters(file)
     @test length(parameters) == 3
     @test length(vals) == 3
     @test all(vals .== 1.0)
@@ -71,7 +71,7 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
     save_file = joinpath(cache_dir, split(split(file, ".mof.json")[1], "/")[end] * "_input_" * string(batch_id)),
     filetype=CSVFile
 )
-    _, vals = L2O.load_parameters(file)
+    _, vals = LearningToOptimize.load_parameters(file)
     num_p=length(vals)
     problem_iterator = general_sampler(
         file;
@@ -87,7 +87,7 @@ function test_general_sampler_file(file::AbstractString="pglib_opf_case5_pjm_DCP
     @test length(problem_iterator.ids) == 2 * num_s + length(range_p) * (1 + num_p)
     @test length(problem_iterator.pairs) == num_p
 
-    input_table = L2O.load(save_file, filetype)
+    input_table = LearningToOptimize.load(save_file, filetype)
     @test size(input_table) == (length(problem_iterator.ids), num_p + 1)
 
     return save_file, problem_iterator.ids

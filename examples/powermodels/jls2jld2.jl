@@ -7,7 +7,7 @@ using MLJ
 using CUDA
 using DataFrames
 using PowerModels
-using L2O
+using LearningToOptimize
 using Random
 using JLD2
 using Wandb, Dates, Logging

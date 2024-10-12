@@ -182,7 +182,7 @@ function _dataframe_to_dict(df::DataFrame, model_file::AbstractString)
     # Load model
     model = read_from_file(model_file)
     # Retrieve parameters
-    parameters, _ = L2O.load_parameters(model)
+    parameters, _ = LearningToOptimize.load_parameters(model)
     return _dataframe_to_dict(df, parameters)
 end
 

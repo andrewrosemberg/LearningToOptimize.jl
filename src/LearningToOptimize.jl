@@ -1,4 +1,4 @@
-module L2O
+module LearningToOptimize
 
 using Arrow
 using CSV

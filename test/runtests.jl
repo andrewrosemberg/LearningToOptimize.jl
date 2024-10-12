@@ -3,7 +3,7 @@ using DelimitedFiles
 using Flux
 using HiGHS
 using JuMP
-using L2O
+using LearningToOptimize
 import ParametricOptInterface as POI
 using Test
 using UUIDs
@@ -30,7 +30,7 @@ include(joinpath(test_dir, "inconvexhull.jl"))
 
 include(joinpath(test_dir, "samplers.jl"))
 
-@testset "L2O.jl" begin
+@testset "LearningToOptimize.jl" begin
     test_load_parameters_model()
     test_load_parameters()
     test_line_sampler()

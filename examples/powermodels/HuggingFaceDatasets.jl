@@ -28,7 +28,7 @@ function download_dataset(organization, dataset, case_name, io_type; formulation
 end
 
 cache_dir="./examples/powermodels/data/"
-organization = "L2O"
+organization = "LearningToOptimize"
 dataset = "pglib_opf_solves"
 case_name = "pglib_opf_case300_ieee"
 formulation = "SOCWRConicPowerModel" # ACPPowerModel SOCWRConicPowerModel DCPPowerModel

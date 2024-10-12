@@ -115,7 +115,7 @@ function test_problem_iterator(path::AbstractString)
         @objective(model, Min, 2x)
         num_p = 10
         batch_id = string(uuid1())
-        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=L2O.JuMPParameterType)
+        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=LearningToOptimize.JuMPParameterType)
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         recorder = Recorder{ArrowFile}(
             file_output; primal_variables=[x], dual_variables=[cons]
@@ -141,7 +141,7 @@ function test_problem_iterator(path::AbstractString)
         @objective(model, Min, 2x)
         num_p = 10
         batch_id = string(uuid1())
-        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=L2O.JuMPNLPParameterType)
+        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=LearningToOptimize.JuMPNLPParameterType)
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         recorder = Recorder{ArrowFile}(
             file_output; primal_variables=[x], dual_variables=[cons]
@@ -163,22 +163,22 @@ end
 
 function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}, ids::Vector{UUID};
     batch_size::Integer=32
-) where {T<:L2O.FileType}
+) where {T<:LearningToOptimize.FileType}
     # Test Load full set 
-    problem_iterator = L2O.load(model_file, input_file, T)
-    @test problem_iterator isa L2O.AbstractProblemIterator
+    problem_iterator = LearningToOptimize.load(model_file, input_file, T)
+    @test problem_iterator isa LearningToOptimize.AbstractProblemIterator
     @test length(problem_iterator.ids) == length(ids)
     # Test load only half of the ids
     num_ids_ignored = floor(Int, length(ids) / 2)
-    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids[1:num_ids_ignored])
+    problem_iterator =  LearningToOptimize.load(model_file, input_file, T; ignore_ids=ids[1:num_ids_ignored])
     @test length(problem_iterator.ids) == length(ids) - num_ids_ignored
     # Test warning all ids to be ignored
-    problem_iterator =  L2O.load(model_file, input_file, T; ignore_ids=ids)
+    problem_iterator =  LearningToOptimize.load(model_file, input_file, T; ignore_ids=ids)
     @test isnothing(problem_iterator)
     # Test Load batch of problem iterators
-    problem_iterator_factory, num_batches =  L2O.load(model_file, input_file, T; batch_size=batch_size)
+    problem_iterator_factory, num_batches =  LearningToOptimize.load(model_file, input_file, T; batch_size=batch_size)
     @test num_batches == ceil(Int, length(ids) / batch_size)
-    @test problem_iterator_factory(1) isa L2O.AbstractProblemIterator
+    @test problem_iterator_factory(1) isa LearningToOptimize.AbstractProblemIterator
     return nothing
 end
 
@@ -192,7 +192,7 @@ function test_compress_batch_arrow(case_file_path::AbstractString=mktempdir(), c
     end
     @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 10
     batch_id = string(uuid1())
-    L2O.compress_batch_arrow(case_file_path, case_name; keyword_all=keyword, batch_id=batch_id, keyword_any=batch_ids)
+    LearningToOptimize.compress_batch_arrow(case_file_path, case_name; keyword_all=keyword, batch_id=batch_id, keyword_any=batch_ids)
     @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 0
     @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(batch_id, file)]) == 1
     return nothing

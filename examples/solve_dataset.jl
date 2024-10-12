@@ -19,7 +19,7 @@ using Random
 
 ########## SCRIPT REQUIRED PACKAGES ##########
 
-@everywhere using L2O
+@everywhere using LearningToOptimize
 @everywhere using UUIDs
 @everywhere import ParametricOptInterface as POI
 @everywhere using JuMP
@@ -74,5 +74,5 @@ problem_iterator_factory, num_batches = load(model_file, input_file, filetype; b
     recorder = Recorder{filetype}(output_file; filterfn= (model) -> true, model=problem_iterator.model)
     successfull_solves = solve_batch(problem_iterator, recorder)
     @info "Solved $(length(successfull_solves)) problems"
-    L2O.compress_batch_arrow(save_path, case_name; keyword_all="output", batch_id=string(batch_id), keyword_any=[string(batch_id)])
+    LearningToOptimize.compress_batch_arrow(save_path, case_name; keyword_all="output", batch_id=string(batch_id), keyword_any=[string(batch_id)])
 end

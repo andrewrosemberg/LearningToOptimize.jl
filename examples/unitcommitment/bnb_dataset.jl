@@ -4,7 +4,7 @@
 
 using LinearAlgebra
 using Gurobi
-using L2O
+using LearningToOptimize
 using JuMP
 using Logging
 using JuMP

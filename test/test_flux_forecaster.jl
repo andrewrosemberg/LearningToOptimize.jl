@@ -49,7 +49,7 @@ function test_fully_connected(;num_samples::Int=100, num_features::Int=10)
     # Train the model
     optimizer = Optimisers.Adam()
     opt_state = Optimisers.setup(optimizer, model)
-    L2O.train!(model, Flux.mse, opt_state, X, y)
+    LearningToOptimize.train!(model, Flux.mse, opt_state, X, y)
 
     # Make predictions
     predictions = model(X)

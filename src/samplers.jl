@@ -95,7 +95,7 @@ end
         original_parameters::Vector{T};
         samplers::Vector{Function}=[
             (original_parameters) -> scaled_distribution_sampler(original_parameters, 1000),
-            L2O.line_sampler, 
+            LearningToOptimize.line_sampler, 
             (original_parameters) -> box_sampler(original_parameters, 10),
         ]
     ) where {T<:Real}
@@ -106,7 +106,7 @@ function general_sampler(
     original_parameters::Vector{T};
     samplers::Vector{Function}=[
         (original_parameters) -> scaled_distribution_sampler(original_parameters, 1000),
-        L2O.line_sampler, 
+        LearningToOptimize.line_sampler, 
         (original_parameters) -> box_sampler(original_parameters, 10),
     ]
 ) where {T<:Real}
@@ -139,7 +139,7 @@ end
         file::AbstractString;
         samplers::Vector{Function}=[
             (original_parameters) -> scaled_distribution_sampler(original_parameters, 1000),
-            L2O.line_sampler, 
+            LearningToOptimize.line_sampler, 
             (original_parameters) -> box_sampler(original_parameters, 10),
         ],
         batch_id::UUID=uuid1(),
@@ -155,7 +155,7 @@ function general_sampler(
     file::AbstractString;
     samplers::Vector{Function}=[
         (original_parameters) -> scaled_distribution_sampler(original_parameters, 1000),
-        L2O.line_sampler, 
+        LearningToOptimize.line_sampler, 
         (original_parameters) -> box_sampler(original_parameters, 10),
     ],
     batch_id::UUID=uuid1(),

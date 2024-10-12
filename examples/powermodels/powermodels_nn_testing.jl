@@ -7,7 +7,7 @@ using CSV
 using Flux
 using DataFrames
 using PowerModels
-using L2O
+using LearningToOptimize
 using JLD2
 using Statistics
 

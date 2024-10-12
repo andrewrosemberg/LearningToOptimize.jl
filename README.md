@@ -1,21 +1,21 @@
 
 <div style="overflow: auto;">
-    <h1 style="float: left;">L2O.jl</h1>
+    <h1 style="float: left;">LearningToOptimize.jl</h1>
     <div style="float: right; margin-left: 20px;">
-      <img src="https://raw.githubusercontent.com/andrewrosemberg/L2O.jl/main/L2O.jpg" alt="Logo" width="100" align="right">
+      <img src="https://raw.githubusercontent.com/andrewrosemberg/LearningToOptimize.jl/main/LearningToOptimize.jpg" alt="Logo" width="100" align="right">
     </div>
 </div>
 
-Learning to optimize (L2O) package that provides basic functionalities to help fit proxy models for optimization.
+Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for optimization.
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://andrewrosemberg.github.io/L2O.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://andrewrosemberg.github.io/L2O.jl/dev/)
-[![Build Status](https://github.com/andrewrosemberg/L2O.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/andrewrosemberg/L2O.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/andrewrosemberg/L2O.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/andrewrosemberg/L2O.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://andrewrosemberg.github.io/LearningToOptimize.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://andrewrosemberg.github.io/LearningToOptimize.jl/dev/)
+[![Build Status](https://github.com/andrewrosemberg/LearningToOptimize.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/andrewrosemberg/LearningToOptimize.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/andrewrosemberg/LearningToOptimize.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/andrewrosemberg/LearningToOptimize.jl)
 
 # Flowchart Summary
 
-![flowchart](https://github.com/andrewrosemberg/L2O.jl/blob/main/docs/L2O.png)
+![flowchart](https://github.com/andrewrosemberg/LearningToOptimize.jl/blob/main/docs/LearningToOptimize.png)
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.

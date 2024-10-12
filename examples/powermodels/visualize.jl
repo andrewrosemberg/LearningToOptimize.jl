@@ -141,7 +141,7 @@ load_vector.norm_loads = [norm(Vector(load_vector[i, Not(:id)])) for i in 1:size
 joined_data = innerjoin(load_vector, output_data[!, [:id, :operational_cost]], on=:id)
 
 # get k extreme points
-using L2O
+using LearningToOptimize
 using Gurobi
 function maxk(a, k)
     b = partialsortperm(a, 1:k, rev=true)

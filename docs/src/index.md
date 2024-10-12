@@ -1,16 +1,16 @@
 ```@meta
-CurrentModule = L2O
+CurrentModule = LearningToOptimize
 ```
 
-# L2O
+# LearningToOptimize
 
-Documentation for [L2O](https://github.com/andrewrosemberg/L2O.jl).
+Documentation for [LearningToOptimize](https://github.com/andrewrosemberg/LearningToOptimize.jl).
 
-Learning to optimize (L2O) package that provides basic functionalities to help fit proxy models for optimization.
+Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for optimization.
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [L2O]
+Modules = [LearningToOptimize]
 ```

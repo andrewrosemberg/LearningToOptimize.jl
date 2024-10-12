@@ -163,7 +163,7 @@ function generate_dataset_pglib(
     internal_load_sampler=load_sampler,
     network_formulation=DCPPowerModel,
     optimizer=() -> POI.Optimizer(HiGHS.Optimizer()),
-    filterfn=L2O.filter_fn,
+    filterfn=LearningToOptimize.filter_fn,
     early_stop_fn=(model, status, recorder) -> false,
     batch_id=string(uuid1()),
 )
