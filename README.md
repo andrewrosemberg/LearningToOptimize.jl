@@ -15,7 +15,7 @@ Learning to optimize (LearningToOptimize) package that provides basic functional
 
 # Flowchart Summary
 
-![flowchart](https://github.com/andrewrosemberg/LearningToOptimize.jl/blob/main/docs/LearningToOptimize.png)
+![flowchart](https://github.com/andrewrosemberg/LearningToOptimize.jl/blob/main/docs/LearningToOptimize.jpg)
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
