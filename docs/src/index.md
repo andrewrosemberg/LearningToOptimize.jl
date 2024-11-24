@@ -26,7 +26,7 @@ Learning to optimize (LearningToOptimize) package that provides basic functional
 
 # Flowchart Summary
 
-![flowchart](docs/L2O.png)
+![flowchart](../L2O.png)
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
