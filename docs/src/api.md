@@ -1,8 +1,8 @@
 # Api
 ## LearningToOptimize
 
-<!-- ```@index
-``` -->
+```@index
+```
 
 ```@autodocs
 Modules = [LearningToOptimize]
