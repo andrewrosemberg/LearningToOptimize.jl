@@ -15,7 +15,7 @@ examples/unitcommitment/app/*
 */app/*
 *.edu
 *.yaml
-# *.png
+*.png
 *.jls
 *.jlso
 *.jld2
