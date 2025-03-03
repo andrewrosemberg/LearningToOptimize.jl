@@ -219,7 +219,8 @@ function generate_dataset_pglib(
     return solve_batch(problem_iterator, recorder),
     length(recorder.primal_variables) + length(recorder.dual_variables),
     length(original_load),
-    batch_id
+    batch_id,
+    problem_iterator
 end
 
 function generate_worst_case_dataset_Nonconvex(
@@ -388,7 +389,7 @@ end
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
     @testset "Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
-        success_solves, number_variables, number_parameters, batch_id = generate_dataset_pglib(
+        success_solves, number_variables, number_parameters, batch_id, problem_iterator = generate_dataset_pglib(
             path, case_name; num_p=num_p, network_formulation=network_formulation
         )
         file_in = joinpath(
@@ -411,7 +412,7 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
         @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
-        return file_in, file_out
+        return file_in, file_out, problem_iterator
     end
 end
 

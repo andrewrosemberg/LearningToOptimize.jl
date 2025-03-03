@@ -1,6 +1,6 @@
 """
 
-    inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64})
+    inconvexhull(training_set::Matrix{Float64}, test_set::Matrix{Float64}, solver; silent=true, tol=1e-4)
 
 Check if new points are inside the convex hull of the given points. Solves a linear programming problem to check if the points are inside the convex hull.
 """

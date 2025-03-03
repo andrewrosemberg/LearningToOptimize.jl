@@ -81,7 +81,7 @@ if haskey(config, "sampler")
     num_p = config["sampler"]["num_samples"]
     global success_solves = 0.0
     for i in 1:num_batches
-        _success_solves, number_variables, number_loads, batch_id = generate_dataset_pglib(
+        _success_solves, number_variables, number_loads, batch_id, _ = generate_dataset_pglib(
             case_file_path,
             case_name;
             num_p=num_p,
@@ -111,7 +111,7 @@ if haskey(config, "line_search")
 
     global success_solves = 0.0
     for ibatc in 1:num_batches
-        _success_solves, number_variables, number_loads, b_id = generate_dataset_pglib(
+        _success_solves, number_variables, number_loads, b_id, _ = generate_dataset_pglib(
             case_file_path,
             case_name;
             num_p=num_p,

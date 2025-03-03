@@ -67,7 +67,11 @@ function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
 end
 
 function load(filename::String, ::Type{ArrowFile})
-    return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
+    if !occursin(string(ArrowFile), filename)
+        return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
+    else
+        return DataFrame(Arrow.Table(filename))
+    end
 end
 
 function compress_batch_arrow(case_file_path::String, case_name::String; keyword_all="output", batch_id::String=string(uuid1()), keyword_any=["_"])

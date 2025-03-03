@@ -48,7 +48,7 @@ include(joinpath(test_dir, "samplers.jl"))
             test_load(model_file, file_in, filetype, ids)
         end
         test_problem_iterator(path)
-        file_in, file_out = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
-        test_flux_forecaster(file_in, file_out)
+        file_in, file_out, problem_iterator = test_pglib_datasetgen(path, "pglib_opf_case5_pjm", 20)
+        test_flux_forecaster(problem_iterator, file_in, file_out)
     end
 end

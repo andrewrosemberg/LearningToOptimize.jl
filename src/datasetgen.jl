@@ -171,6 +171,10 @@ function _dataframe_to_dict(df::DataFrame, parameters::Vector{VariableRef})
             idx = findfirst(parameters) do p
                 name(p) == string(ky)
             end
+            if isnothing(idx)
+                @error("Parameter $ky not found in model")
+                return nothing
+            end
             parameter = parameters[idx]
             push!(pairs, parameter => df[!,ky])
         end
@@ -182,7 +186,7 @@ function _dataframe_to_dict(df::DataFrame, model_file::AbstractString)
     # Load model
     model = read_from_file(model_file)
     # Retrieve parameters
-    parameters, _ = LearningToOptimize.load_parameters(model)
+    parameters = LearningToOptimize.load_parameters(model)
     return _dataframe_to_dict(df, parameters)
 end
 

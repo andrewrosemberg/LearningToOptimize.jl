@@ -62,7 +62,21 @@ Which creates the following CSV:
 |  9 | 9.0 |
 | 10 | 10.0|
 
-ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs. 
+ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs.
+
+To load the parameter values back:
+
+```julia
+problem_iterator = load("input_file.csv", CSVFile)
+```
+
+### Samplers
+
+The user may sample the parameter values using pre-defined samplers:
+
+```julia
+
+```
 
 ### The Recorder
 
@@ -104,13 +118,15 @@ recorder = Recorder{ArrowFile}("output_file.arrow", primal_variables=[x], dual_v
 In order to train models to be able to forecast optimization solutions from parameter values, one option is to use the package Flux.jl:
 
 ```julia
+using CSV, DataFrames, Flux
+
 # read input and output data
 input_data = CSV.read("input_file.csv", DataFrame)
 output_data = CSV.read("output_file.csv", DataFrame)
 
 # Separate input and output variables
-output_variables = output_data[!, Not(:id)]
-input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+output_variables = output_data[!, Not([:id, :status, :primal_status, :dual_status, :objective, :time])] # just predict solutions
+input_features = innerjoin(input_data, output_data[!, [:id]]; on=:id)[!, Not(:id)] # just use success solves
 
 # Define model
 model = Chain(
@@ -134,6 +150,38 @@ Flux.train!(loss, Flux.params(model), [(input_features, output_variables)], opti
 
 # Make predictions
 predictions = model(input_features)
+```
+
+Another option is to use the package MLJ.jl:
+
+```julia
+using MLJ
+
+# Define the model
+model = MultitargetNeuralNetworkRegressor(;
+    builder=FullyConnectedBuilder([64, 32]),
+    rng=123,
+    epochs=20,
+    optimiser=Optimisers.Adam(),
+)
+
+# Train the model
+mach = machine(model, input_features, output_variables)
+fit!(mach; verbosity=2)
+
+# Make predictions
+predict(mach, input_features)
+
+```
+
+### Evaluating the model is easy
+
+For ease of use, we built a general evaluator that can be used to evaluate the model.
+It will return a `NamedTuple` with the objective value and infeasibility of the 
+predicted solution for each instance, and the overall inference time and allocated memory.
+
+```julia
+evaluation = general_evaluator(problem_iterator, mach)
 ```
 
 ## Coming Soon
