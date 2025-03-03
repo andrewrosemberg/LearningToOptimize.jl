@@ -6,7 +6,7 @@
     </div>
 </div>
 
-Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for optimization.
+Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for parametric optimization problems.
 
 Have a look at our sister [HugginFace Organization](https://huggingface.co/LearningToOptimize), for datasets, pre-trained models and benchmarks.
 
@@ -18,6 +18,34 @@ Have a look at our sister [HugginFace Organization](https://huggingface.co/Learn
 # Flowchart Summary
 
 ![flowchart](docs/src/assets/L2O.png)
+
+# Background
+
+Parametric optimization problems arise in scenarios where certain elements (e.g., coefficients, constraints) may vary according to problem parameters. A general form of a parameterized convex optimization problem is 
+
+$$
+\begin{aligned}
+&\min_{x} \quad f(x; \theta) \\
+&\text{subject to} \quad g_i(x; \theta) \leq 0, \quad i = 1,\dots, m \\
+&\quad\quad\quad\quad A(\theta)x = b(\theta)
+\end{aligned}
+$$
+
+where $ \theta $ is the parameter.
+
+**Learning to Optimize (L2O)** is an emerging paradigm where machine learning models *learn* to solve optimization problems efficiently. This approach is also known as using **optimization proxies** or **amortized optimization**. 
+
+In more technical terms, **amortized optimization** seeks to learn a function \\( f_\theta(x) \\) that maps problem parameters \\( x \\) to solutions \\( y \\) that (approximately) minimize a given objective function subject to constraints. Modern methods leverage techniques like **differentiable optimization layers**, **input-convex neural networks**, or constraint-enforcing architectures (e.g., [DC3](https://openreview.net/pdf?id=0Ow8_1kM5Z)) to ensure that the learned proxy solutions are both feasible and performant. By coupling the solver and the model in an **end-to-end** pipeline, these approaches let the training objective directly reflect downstream metrics, improving speed and reliability.
+
+Recent advances also focus on **trustworthy** or **certifiable** proxies, where constraint satisfaction or performance bounds are guaranteed. This is crucial in domains like energy systems or manufacturing, where infeasible solutions can have large penalties or safety concerns. Overall, learning-based optimization frameworks aim to combine the advantages of ML (data-driven generalization) with the rigor of mathematical programming (constraint handling and optimality).
+
+For a broader overview, see the [SIAM News article on trustworthy optimization proxies](https://www.siam.org/publications/siam-news/articles/fusing-artificial-intelligence-and-optimization-with-trustworthy-optimization-proxies/), which highlights the growing synergy between AI and classical optimization.
+
+# Installation
+
+```julia
+] add LearningToOptimize
+```
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
