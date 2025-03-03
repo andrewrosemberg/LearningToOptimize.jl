@@ -11,7 +11,7 @@ function update_training_loss(report)
 end
 
 function update_epochs(epoch)
-    Wandb.log(lg, Dict("log/epoch" => epoch)) 
+    Wandb.log(lg, Dict("log/epoch" => epoch))
     return nothing
 end
 
@@ -24,23 +24,27 @@ struct WithModelLossDo{F<:Function}
 end
 
 # constructor:
-WithModelLossDo(; f=(x,model)->@info("loss: $x"),
-           stop_if_true=false,
-           stop_message=nothing) = WithModelLossDo(f, stop_if_true, stop_message)
-WithModelLossDo(f; kwargs...) = WithModelLossDo(; f=f, kwargs...)
+WithModelLossDo(;
+    f = (x, model) -> @info("loss: $x"),
+    stop_if_true = false,
+    stop_message = nothing,
+) = WithModelLossDo(f, stop_if_true, stop_message)
+WithModelLossDo(f; kwargs...) = WithModelLossDo(; f = f, kwargs...)
 
 IterationControl.needs_loss(::WithModelLossDo) = true
 
-function IterationControl.update!(c::WithModelLossDo,
-                 model,
-                 verbosity,
-                 n,
-                 state=(loss=nothing, done=false))
+function IterationControl.update!(
+    c::WithModelLossDo,
+    model,
+    verbosity,
+    n,
+    state = (loss = nothing, done = false),
+)
     loss = IterationControl.loss(model)
     loss === nothing && throw(ERR_NEEDS_LOSS)
     r = c.f(loss, model)
     done = (c.stop_if_true && r isa Bool && r) ? true : false
-    return (loss=loss, done=done)
+    return (loss = loss, done = done)
 end
 
 IterationControl.done(c::WithModelLossDo, state) = state.done
@@ -48,8 +52,8 @@ IterationControl.done(c::WithModelLossDo, state) = state.done
 function IterationControl.takedown(c::WithModelLossDo, verbosity, state)
     verbosity > 1 && @info "final loss: $(state.loss). "
     if state.done
-        message = c.stop_message === nothing ?
-            "Stop triggered by a `WithModelLossDo` control. " :
+        message =
+            c.stop_message === nothing ? "Stop triggered by a `WithModelLossDo` control. " :
             c.stop_message
         verbosity > 0 && @info message
         return merge(state, (log = message,))
@@ -72,7 +76,12 @@ function (callback::SaveBest)(loss, ic_model)
         callback.best_loss = loss
         model = mach.fitresult[1]
         model_state = Flux.state(model)
-        jldsave(model_path; model_state=model_state, layers=layers, input_features=input_features)
+        jldsave(
+            model_path;
+            model_state = model_state,
+            layers = layers,
+            input_features = input_features,
+        )
     end
     if loss < callback.threshold
         return true

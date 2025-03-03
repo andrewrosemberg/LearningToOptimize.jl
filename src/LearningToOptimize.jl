@@ -7,12 +7,14 @@ using JuMP
 using UUIDs
 import ParametricOptInterface as POI
 import JuMP.MOI as MOI
+import JuMP.MOI.Utilities: distance_to_set
 import Base: string
 using Statistics
 using Distributions
 
 using Zygote
 
+using MLJ
 using MLJFlux
 using Flux
 using Flux: @functor
@@ -42,7 +44,10 @@ export ArrowFile,
     box_sampler,
     scaled_distribution_sampler,
     general_sampler,
-    compress_batch_arrow
+    compress_batch_arrow,
+    feasibility_evaluator,
+    objective_evaluator,
+    general_evaluator
 
 include("datasetgen.jl")
 include("csvrecorder.jl")
@@ -52,5 +57,6 @@ include("nn_expression.jl")
 include("metrics.jl")
 include("inconvexhull.jl")
 include("samplers.jl")
+include("model_evaluator.jl")
 
 end

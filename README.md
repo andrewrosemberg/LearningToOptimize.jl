@@ -6,7 +6,7 @@
     </div>
 </div>
 
-Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for optimization.
+Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for parametric optimization problems.
 
 Have a look at our sister [HugginFace Organization](https://huggingface.co/LearningToOptimize), for datasets, pre-trained models and benchmarks.
 
@@ -18,6 +18,34 @@ Have a look at our sister [HugginFace Organization](https://huggingface.co/Learn
 # Flowchart Summary
 
 ![flowchart](docs/src/assets/L2O.png)
+
+# Background
+
+Parametric optimization problems arise in scenarios where certain elements (e.g., coefficients, constraints) may vary according to problem parameters. A general form of a parameterized convex optimization problem is 
+
+$$
+\begin{aligned}
+&\min_{x} \quad f(x; \theta) \\
+&\text{subject to} \quad g_i(x; \theta) \leq 0, \quad i = 1,\dots, m \\
+&\quad\quad\quad\quad A(\theta)x = b(\theta)
+\end{aligned}
+$$
+
+where $ \theta $ is the parameter.
+
+**Learning to Optimize (L2O)** is an emerging paradigm where machine learning models *learn* to solve optimization problems efficiently. This approach is also known as using **optimization proxies** or **amortized optimization**. 
+
+In more technical terms, **amortized optimization** seeks to learn a function \\( f_\theta(x) \\) that maps problem parameters \\( x \\) to solutions \\( y \\) that (approximately) minimize a given objective function subject to constraints. Modern methods leverage techniques like **differentiable optimization layers**, **input-convex neural networks**, or constraint-enforcing architectures (e.g., [DC3](https://openreview.net/pdf?id=0Ow8_1kM5Z)) to ensure that the learned proxy solutions are both feasible and performant. By coupling the solver and the model in an **end-to-end** pipeline, these approaches let the training objective directly reflect downstream metrics, improving speed and reliability.
+
+Recent advances also focus on **trustworthy** or **certifiable** proxies, where constraint satisfaction or performance bounds are guaranteed. This is crucial in domains like energy systems or manufacturing, where infeasible solutions can have large penalties or safety concerns. Overall, learning-based optimization frameworks aim to combine the advantages of ML (data-driven generalization) with the rigor of mathematical programming (constraint handling and optimality).
+
+For a broader overview, see the [SIAM News article on trustworthy optimization proxies](https://www.siam.org/publications/siam-news/articles/fusing-artificial-intelligence-and-optimization-with-trustworthy-optimization-proxies/), which highlights the growing synergy between AI and classical optimization.
+
+# Installation
+
+```julia
+] add LearningToOptimize
+```
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
@@ -62,7 +90,33 @@ Which creates the following CSV:
 |  9 | 9.0 |
 | 10 | 10.0|
 
-ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs. 
+ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs.
+
+To load the parameter values back:
+
+```julia
+problem_iterator = load("input_file.csv", CSVFile)
+```
+
+### Samplers
+
+Instead of defining parameter instances manually, one may sample parameter values using pre-defined samplers - e.g. `scaled_distribution_sampler`, `box_sampler`- or define their own sampler. Samplers are functions that take a vector of parameter of type `MOI.Parameter` and return a matrix of parameter values.
+
+The easiest way to go from problem definition, sampling parameter values and saving them is to use the `general_sampler` function: 
+
+```julia
+general_sampler(
+    "examples/powermodels/data/6468_rte/6468_rte_SOCWRConicPowerModel_POI_load.mof.json";
+    samplers = [
+        (original_parameters) -> scaled_distribution_sampler(original_parameters, 10000),
+        (original_parameters) -> line_sampler(original_parameters, 1.01:0.01:1.25),
+        (original_parameters) -> box_sampler(original_parameters, 300),
+    ],
+)
+```
+
+This function is a general sampler that uses a set of samplers to sample the parameter space. 
+It loads the underlying model from a passed `file` that works with JuMP's `read_from_file` (ps.: currently only tested with `MathOptFormat`), samples the parameters and saves the sampled parameters to `save_file`.
 
 ### The Recorder
 
@@ -104,13 +158,15 @@ recorder = Recorder{ArrowFile}("output_file.arrow", primal_variables=[x], dual_v
 In order to train models to be able to forecast optimization solutions from parameter values, one option is to use the package Flux.jl:
 
 ```julia
+using CSV, DataFrames, Flux
+
 # read input and output data
 input_data = CSV.read("input_file.csv", DataFrame)
 output_data = CSV.read("output_file.csv", DataFrame)
 
 # Separate input and output variables
-output_variables = output_data[!, Not(:id)]
-input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+output_variables = output_data[!, Not([:id, :status, :primal_status, :dual_status, :objective, :time])] # just predict solutions
+input_features = innerjoin(input_data, output_data[!, [:id]]; on=:id)[!, Not(:id)] # just use success solves
 
 # Define model
 model = Chain(
@@ -134,6 +190,38 @@ Flux.train!(loss, Flux.params(model), [(input_features, output_variables)], opti
 
 # Make predictions
 predictions = model(input_features)
+```
+
+Another option is to use the package MLJ.jl:
+
+```julia
+using MLJ
+
+# Define the model
+model = MultitargetNeuralNetworkRegressor(;
+    builder=FullyConnectedBuilder([64, 32]),
+    rng=123,
+    epochs=20,
+    optimiser=Optimisers.Adam(),
+)
+
+# Train the model
+mach = machine(model, input_features, output_variables)
+fit!(mach; verbosity=2)
+
+# Make predictions
+predict(mach, input_features)
+
+```
+
+### Evaluating the ML model
+
+For ease of use, we built a general evaluator that can be used to evaluate the model.
+It will return a `NamedTuple` with the objective value and infeasibility of the 
+predicted solution for each instance, and the overall inference time and allocated memory.
+
+```julia
+evaluation = general_evaluator(problem_iterator, mach)
 ```
 
 ## Coming Soon

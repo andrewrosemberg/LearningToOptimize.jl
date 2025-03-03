@@ -7,14 +7,14 @@ Base.string(::Type{ArrowFile}) = "arrow"
 
 Record optimization problem solution to an Arrow file.
 """
-function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
+function record(recorder::Recorder{ArrowFile}, id::UUID; input = false)
     _filename = input ? filename_input(recorder) : filename(recorder)
     _filename = _filename * "_$(string(id))." * string(ArrowFile)
     model = recorder.model
 
-    status=JuMP.termination_status(model)
-    primal_stat=JuMP.primal_status(model)
-    dual_stat=JuMP.dual_status(model)
+    status = JuMP.termination_status(model)
+    primal_stat = JuMP.primal_status(model)
+    dual_stat = JuMP.dual_status(model)
 
     primal_values = if in(primal_stat, DECISION_STATUS)
         [[value.(p)] for p in recorder.primal_variables]
@@ -35,25 +35,19 @@ function record(recorder::Recorder{ArrowFile}, id::UUID; input=false)
     end
 
     df = (;
-        id=[id],
-        zip(
-            Symbol.(name.(recorder.primal_variables)),
-            primal_values,
-        )...,
-        zip(
-            Symbol.("dual_" .* name.(recorder.dual_variables)),
-            dual_values,
-        )...,
+        id = [id],
+        zip(Symbol.(name.(recorder.primal_variables)), primal_values)...,
+        zip(Symbol.("dual_" .* name.(recorder.dual_variables)), dual_values)...,
     )
     if !input
         df = merge(
             df,
             (;
-                objective=[objective],
-                time=[JuMP.solve_time(model)],
-                status=[string(status)],
-                primal_status=[string(primal_stat)],
-                dual_status=[string(dual_stat)],
+                objective = [objective],
+                time = [JuMP.solve_time(model)],
+                status = [string(status)],
+                primal_status = [string(primal_stat)],
+                dual_status = [string(dual_stat)],
             ),
         )
     end
@@ -67,13 +61,26 @@ function save(table::NamedTuple, filename::String, ::Type{ArrowFile})
 end
 
 function load(filename::String, ::Type{ArrowFile})
-    return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
+    if !occursin(string(ArrowFile), filename)
+        return DataFrame(Arrow.Table(filename * "." * string(ArrowFile)))
+    else
+        return DataFrame(Arrow.Table(filename))
+    end
 end
 
-function compress_batch_arrow(case_file_path::String, case_name::String; keyword_all="output", batch_id::String=string(uuid1()), keyword_any=["_"])
-    iter_files = readdir(case_file_path; join=true)
+function compress_batch_arrow(
+    case_file_path::String,
+    case_name::String;
+    keyword_all = "output",
+    batch_id::String = string(uuid1()),
+    keyword_any = ["_"],
+)
+    iter_files = readdir(case_file_path; join = true)
     file_outs = [
-        file for file in iter_files if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword_all, file) && any(x -> occursin(x, file), keyword_any)
+        file for file in iter_files if occursin(case_name, file) &&
+        occursin("arrow", file) &&
+        occursin(keyword_all, file) &&
+        any(x -> occursin(x, file), keyword_any)
     ]
     output_table = Arrow.Table(file_outs)
     Arrow.write(

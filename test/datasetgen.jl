@@ -18,10 +18,12 @@ function test_problem_iterator(path::AbstractString)
         batch_id = string(uuid1())
         @testset "Problem Iterator Builder" begin
             @test_throws AssertionError ProblemIterator(
-                [uuid1() for _ in 1:num_p], Dict(p => collect(1.0:3.0))
+                [uuid1() for _ = 1:num_p],
+                Dict(p => collect(1.0:3.0)),
             )
             @test_throws MethodError ProblemIterator(
-                collect(1.0:3.0), Dict(p => collect(1.0:3.0))
+                collect(1.0:3.0),
+                Dict(p => collect(1.0:3.0)),
             )
             problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)))
             file_input = joinpath(path, "test_$(batch_id)_input") # file path
@@ -35,21 +37,21 @@ function test_problem_iterator(path::AbstractString)
         # The recorder
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         @testset "Recorder Builder" begin
-            @test Recorder{filetype}(file_output; primal_variables=[x]) isa
-                Recorder{filetype}
-            @test Recorder{filetype}(file_output; dual_variables=[cons]) isa
-                Recorder{filetype}
+            @test Recorder{filetype}(file_output; primal_variables = [x]) isa
+                  Recorder{filetype}
+            @test Recorder{filetype}(file_output; dual_variables = [cons]) isa
+                  Recorder{filetype}
         end
-        recorder = Recorder{filetype}(
-            file_output; primal_variables=[x], dual_variables=[cons]
-        )
+        recorder =
+            Recorder{filetype}(file_output; primal_variables = [x], dual_variables = [cons])
 
         # Solve all problems and record solutions
         @testset "early_stop" begin
             file_dual_output = joinpath(path, "test_$(string(uuid1()))_output") # file path
-            recorder_dual = Recorder{filetype}(file_dual_output; dual_variables=[cons])
+            recorder_dual = Recorder{filetype}(file_dual_output; dual_variables = [cons])
             problem_iterator = ProblemIterator(
-                Dict(p => collect(1.0:num_p)); early_stop=(args...) -> true
+                Dict(p => collect(1.0:num_p));
+                early_stop = (args...) -> true,
             )
             successfull_solves = solve_batch(problem_iterator, recorder_dual)
             @test num_p * successfull_solves == 1
@@ -57,10 +59,11 @@ function test_problem_iterator(path::AbstractString)
 
         @testset "pre_solve_hook" begin
             file_dual_output = joinpath(path, "test_$(string(uuid1()))_output") # file path
-            recorder_dual = Recorder{filetype}(file_dual_output; dual_variables=[cons])
+            recorder_dual = Recorder{filetype}(file_dual_output; dual_variables = [cons])
             sum_p = 0
             problem_iterator = ProblemIterator(
-                Dict(p => collect(1.0:num_p)); pre_solve_hook=(args...) -> sum_p += 1
+                Dict(p => collect(1.0:num_p));
+                pre_solve_hook = (args...) -> sum_p += 1,
             )
             successfull_solves = solve_batch(problem_iterator, recorder_dual)
             @test sum_p == num_p
@@ -80,7 +83,7 @@ function test_problem_iterator(path::AbstractString)
                 file_output = file_output * ".$(string(filetype))"
                 @test isfile(file_output)
                 @test length(readdlm(file_output, ',')[:, 1]) ==
-                    num_p * successfull_solves + 1 # 1 from header
+                      num_p * successfull_solves + 1 # 1 from header
                 @test length(readdlm(file_output, ',')[1, :]) == 8
                 rm(file_output)
             else
@@ -115,10 +118,15 @@ function test_problem_iterator(path::AbstractString)
         @objective(model, Min, 2x)
         num_p = 10
         batch_id = string(uuid1())
-        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=LearningToOptimize.JuMPParameterType)
+        problem_iterator = ProblemIterator(
+            Dict(p => collect(1.0:num_p));
+            param_type = LearningToOptimize.JuMPParameterType,
+        )
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         recorder = Recorder{ArrowFile}(
-            file_output; primal_variables=[x], dual_variables=[cons]
+            file_output;
+            primal_variables = [x],
+            dual_variables = [cons],
         )
         successfull_solves = solve_batch(problem_iterator, recorder)
         iter_files = readdir(joinpath(path))
@@ -141,10 +149,15 @@ function test_problem_iterator(path::AbstractString)
         @objective(model, Min, 2x)
         num_p = 10
         batch_id = string(uuid1())
-        problem_iterator = ProblemIterator(Dict(p => collect(1.0:num_p)); param_type=LearningToOptimize.JuMPNLPParameterType)
+        problem_iterator = ProblemIterator(
+            Dict(p => collect(1.0:num_p));
+            param_type = LearningToOptimize.JuMPNLPParameterType,
+        )
         file_output = joinpath(path, "test_$(batch_id)_output") # file path
         recorder = Recorder{ArrowFile}(
-            file_output; primal_variables=[x], dual_variables=[cons]
+            file_output;
+            primal_variables = [x],
+            dual_variables = [cons],
         )
         successfull_solves = solve_batch(problem_iterator, recorder)
         iter_files = readdir(joinpath(path))
@@ -161,8 +174,12 @@ function test_problem_iterator(path::AbstractString)
     end
 end
 
-function test_load(model_file::AbstractString, input_file::AbstractString, ::Type{T}, ids::Vector{UUID};
-    batch_size::Integer=32
+function test_load(
+    model_file::AbstractString,
+    input_file::AbstractString,
+    ::Type{T},
+    ids::Vector{UUID};
+    batch_size::Integer = 32,
 ) where {T<:LearningToOptimize.FileType}
     # Test Load full set 
     problem_iterator = LearningToOptimize.load(model_file, input_file, T)
@@ -170,30 +187,67 @@ function test_load(model_file::AbstractString, input_file::AbstractString, ::Typ
     @test length(problem_iterator.ids) == length(ids)
     # Test load only half of the ids
     num_ids_ignored = floor(Int, length(ids) / 2)
-    problem_iterator =  LearningToOptimize.load(model_file, input_file, T; ignore_ids=ids[1:num_ids_ignored])
+    problem_iterator = LearningToOptimize.load(
+        model_file,
+        input_file,
+        T;
+        ignore_ids = ids[1:num_ids_ignored],
+    )
     @test length(problem_iterator.ids) == length(ids) - num_ids_ignored
     # Test warning all ids to be ignored
-    problem_iterator =  LearningToOptimize.load(model_file, input_file, T; ignore_ids=ids)
+    problem_iterator = LearningToOptimize.load(model_file, input_file, T; ignore_ids = ids)
     @test isnothing(problem_iterator)
     # Test Load batch of problem iterators
-    problem_iterator_factory, num_batches =  LearningToOptimize.load(model_file, input_file, T; batch_size=batch_size)
+    problem_iterator_factory, num_batches =
+        LearningToOptimize.load(model_file, input_file, T; batch_size = batch_size)
     @test num_batches == ceil(Int, length(ids) / batch_size)
     @test problem_iterator_factory(1) isa LearningToOptimize.AbstractProblemIterator
     return nothing
 end
 
-function test_compress_batch_arrow(case_file_path::AbstractString=mktempdir(), case_name::AbstractString="test"; keyword::AbstractString="output")
+function test_compress_batch_arrow(
+    case_file_path::AbstractString = mktempdir(),
+    case_name::AbstractString = "test";
+    keyword::AbstractString = "output",
+)
     random_data = rand(10, 10)
-    col_names = ["col_$(i)" for i in 1:10]
-    batch_ids = [string(uuid1()) for _ in 1:10]
-    dfs = [DataFrame(random_data[i:i, :], col_names) for i in 1:10]
-    for i in 1:10
-        Arrow.write(joinpath(case_file_path, "$(case_name)_$(keyword)_$(batch_ids[i]).arrow"), dfs[i])
+    col_names = ["col_$(i)" for i = 1:10]
+    batch_ids = [string(uuid1()) for _ = 1:10]
+    dfs = [DataFrame(random_data[i:i, :], col_names) for i = 1:10]
+    for i = 1:10
+        Arrow.write(
+            joinpath(case_file_path, "$(case_name)_$(keyword)_$(batch_ids[i]).arrow"),
+            dfs[i],
+        )
     end
-    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 10
+    @test length([
+        file for
+        file in readdir(case_file_path; join = true) if occursin(case_name, file) &&
+        occursin("arrow", file) &&
+        occursin(keyword, file) &&
+        any(x -> occursin(x, file), batch_ids)
+    ]) == 10
     batch_id = string(uuid1())
-    LearningToOptimize.compress_batch_arrow(case_file_path, case_name; keyword_all=keyword, batch_id=batch_id, keyword_any=batch_ids)
-    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && any(x -> occursin(x, file), batch_ids)]) == 0
-    @test length([file for file in readdir(case_file_path; join=true) if occursin(case_name, file) && occursin("arrow", file) && occursin(keyword, file) && occursin(batch_id, file)]) == 1
+    LearningToOptimize.compress_batch_arrow(
+        case_file_path,
+        case_name;
+        keyword_all = keyword,
+        batch_id = batch_id,
+        keyword_any = batch_ids,
+    )
+    @test length([
+        file for
+        file in readdir(case_file_path; join = true) if occursin(case_name, file) &&
+        occursin("arrow", file) &&
+        occursin(keyword, file) &&
+        any(x -> occursin(x, file), batch_ids)
+    ]) == 0
+    @test length([
+        file for
+        file in readdir(case_file_path; join = true) if occursin(case_name, file) &&
+        occursin("arrow", file) &&
+        occursin(keyword, file) &&
+        occursin(batch_id, file)
+    ]) == 1
     return nothing
 end

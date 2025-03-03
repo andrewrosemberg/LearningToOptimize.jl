@@ -38,10 +38,10 @@ struct WorstCaseProblemIterator{F} <: AbstractProblemIterator
         primal_builder!::Function,
         set_iterator!::Function,
         optimizer::F;
-        hook::Union{Nothing,Function}=nothing,
-        options::Any=nothing,
-        ext::Dict=Dict(),
-        early_stop::Function=(args...) -> false,
+        hook::Union{Nothing,Function} = nothing,
+        options::Any = nothing,
+        ext::Dict = Dict(),
+        early_stop::Function = (args...) -> false,
     ) where {F}
         return new{F}(
             ids,
@@ -69,7 +69,9 @@ solution if it passes the filter function.
 - `idx::Integer`: The index of the problem to solve.
 """
 function solve_and_record(
-    problem_iterator::WorstCaseProblemIterator, recorder::Recorder, idx::Integer
+    problem_iterator::WorstCaseProblemIterator,
+    recorder::Recorder,
+    idx::Integer,
 )
     # Build Primal
     model = JuMP.Model()
@@ -80,7 +82,7 @@ function solve_and_record(
     load_moi_idx = Vector{MOI.VariableIndex}(JuMP.index.(parameters))
 
     # Dualize the model
-    dual_st = Dualization.dualize(JuMP.backend(model); variable_parameters=load_moi_idx)
+    dual_st = Dualization.dualize(JuMP.backend(model); variable_parameters = load_moi_idx)
 
     dual_model = dual_st.dual_model
     primal_dual_map = dual_st.primal_dual_map
@@ -94,9 +96,8 @@ function solve_and_record(
     end
 
     # Get dual variables for the parameters
-    load_dual_idxs = [
-        map_moi_to_jump[primal_dual_map.primal_parameter[l]].value for l in load_moi_idx
-    ]
+    load_dual_idxs =
+        [map_moi_to_jump[primal_dual_map.primal_parameter[l]].value for l in load_moi_idx]
     load_var_dual = JuMP.all_variables(jump_dual_model)[load_dual_idxs]
 
     # Add constraints to the dual associated with the parameters
@@ -124,7 +125,7 @@ function solve_and_record(
     if recorder.filterfn(jump_dual_model)
         recorder.primal_variables = load_var_dual
         recorder.dual_variables = []
-        record(recorder, problem_iterator.ids[idx]; input=true)
+        record(recorder, problem_iterator.ids[idx]; input = true)
     else
         return 0, early_stop_bool
     end
@@ -134,7 +135,7 @@ function solve_and_record(
 
     # Create final primal model and solve
     model = JuMP.Model(problem_iterator.optimizer())
-    problem_iterator.primal_builder!(model, optimal_loads; recorder=recorder)
+    problem_iterator.primal_builder!(model, optimal_loads; recorder = recorder)
     JuMP.optimize!(model)
 
     termination_status = recorder.filterfn(model)
@@ -148,7 +149,7 @@ function solve_and_record(
     solution_primal_status != MOI.FEASIBLE_POINT && @warn("Primal solution not found")
     solution_dual_status != MOI.FEASIBLE_POINT && @warn("Dual solution not found")
 
-    if !isapprox(optimal_final_cost, optimal_dual_cost; rtol=1e-4)
+    if !isapprox(optimal_final_cost, optimal_dual_cost; rtol = 1e-4)
         rtol = abs(optimal_final_cost - optimal_dual_cost) / optimal_final_cost * 100
         @warn "Final cost is not equal to dual cost by $(rtol) %" optimal_final_cost optimal_dual_cost
     end

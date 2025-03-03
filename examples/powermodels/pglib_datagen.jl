@@ -30,9 +30,9 @@ function load_sampler(
     num_p::F,
     ::F,
     ::F;
-    max_multiplier::T=2.5,
-    min_multiplier::T=0.0,
-    step_multiplier::T=0.1,
+    max_multiplier::T = 2.5,
+    min_multiplier::T = 0.0,
+    step_multiplier::T = 0.1,
 ) where {T<:Real,F<:Integer}
     # Load sampling
     load_samples =
@@ -73,13 +73,16 @@ end
 
 load_parameter_factory is a function to help generate a parameter vector for the problem iterator.
 """
-function load_parameter_factory(model, indices; load_set=nothing)
+function load_parameter_factory(model, indices; load_set = nothing)
     if isnothing(load_set)
-        return @variable(model, _p[i=indices])
+        return @variable(model, _p[i = indices])
     end
-    num_loads = floor(Int,length(indices) / 2)
+    num_loads = floor(Int, length(indices) / 2)
     pd_index = indices[1:num_loads]
-    return [@variable(model, pd[i=pd_index] in load_set[i]).data; @variable(model, qd[i=pd_index] in load_set[i+num_loads]).data]
+    return [
+        @variable(model, pd[i = pd_index] in load_set[i]).data
+        @variable(model, qd[i = pd_index] in load_set[i+num_loads]).data
+    ]
 end
 
 """
@@ -92,14 +95,14 @@ function pm_primal_builder!(
     parameters,
     network_data,
     network_formulation;
-    recorder=nothing,
-    record_duals=false,
+    recorder = nothing,
+    record_duals = false,
 )
     num_loads = length(network_data["load"])
     for (str_i, l) in network_data["load"]
         i = parse(Int, str_i)
         l["pd"] = parameters[i]
-        l["qd"] = parameters[num_loads + i]
+        l["qd"] = parameters[num_loads+i]
     end
 
     # Instantiate the model
@@ -107,8 +110,8 @@ function pm_primal_builder!(
         network_data,
         network_formulation,
         PowerModels.build_opf;
-        setting=Dict("output" => Dict("branch_flows" => true, "duals" => true)),
-        jump_model=model,
+        setting = Dict("output" => Dict("branch_flows" => true, "duals" => true)),
+        jump_model = model,
     )
 
     if !isnothing(recorder)
@@ -120,10 +123,10 @@ function pm_primal_builder!(
         if record_duals
             # Bus
             real_balance = [bus[:lam_kcl_r] for bus in values(PowerModels.sol(pm)[:bus])]
-            set_name.(real_balance, ["lam_kcl_r[$(i)]" for i in 1:length(real_balance)])
+            set_name.(real_balance, ["lam_kcl_r[$(i)]" for i = 1:length(real_balance)])
             imag_balance = [bus[:lam_kcl_i] for bus in values(PowerModels.sol(pm)[:bus])]
             if eltype(imag_balance) <: ConstraintRef
-                set_name.(imag_balance, ["lam_kcl_i[$(i)]" for i in 1:length(imag_balance)])
+                set_name.(imag_balance, ["lam_kcl_i[$(i)]" for i = 1:length(imag_balance)])
                 set_dual_variable!(recorder, vcat(real_balance, imag_balance))
             else
                 set_dual_variable!(recorder, real_balance)
@@ -158,14 +161,14 @@ Generate dataset for pglib case_name with num_p problems and save it in data_dir
 function generate_dataset_pglib(
     data_dir,
     case_name;
-    filetype=CSVFile,
-    num_p=10,
-    internal_load_sampler=load_sampler,
-    network_formulation=DCPPowerModel,
-    optimizer=() -> POI.Optimizer(HiGHS.Optimizer()),
-    filterfn=LearningToOptimize.filter_fn,
-    early_stop_fn=(model, status, recorder) -> false,
-    batch_id=string(uuid1()),
+    filetype = CSVFile,
+    num_p = 10,
+    internal_load_sampler = load_sampler,
+    network_formulation = DCPPowerModel,
+    optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
+    filterfn = LearningToOptimize.filter_fn,
+    early_stop_fn = (model, status, recorder) -> false,
+    batch_id = string(uuid1()),
 )
     @info "Batch ID: $batch_id"
 
@@ -185,26 +188,36 @@ function generate_dataset_pglib(
     num_loads = length(network_data["load"])
     num_inputs = num_loads * 2
     original_load = vcat(
-        [network_data["load"]["$l"]["pd"] for l in 1:num_loads],
-        [network_data["load"]["$l"]["qd"] for l in 1:num_loads],
+        [network_data["load"]["$l"]["pd"] for l = 1:num_loads],
+        [network_data["load"]["$l"]["qd"] for l = 1:num_loads],
     )
-    p = load_parameter_factory(model, 1:num_inputs; load_set=MOI.Parameter.(original_load))
+    p = load_parameter_factory(
+        model,
+        1:num_inputs;
+        load_set = MOI.Parameter.(original_load),
+    )
 
     # Build model and Recorder
     file = joinpath(
-        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+        data_sim_dir,
+        case_name * "_" * string(network_formulation) * "_output_" * batch_id,
     )
-    recorder = Recorder{filetype}(file; filterfn=filterfn,model=model)
+    recorder = Recorder{filetype}(file; filterfn = filterfn, model = model)
     pm_primal_builder!(
-        model, p, network_data, network_formulation; recorder=recorder, record_duals=true
+        model,
+        p,
+        network_data,
+        network_formulation;
+        recorder = recorder,
+        record_duals = true,
     )
 
     # The problem iterator
     pairs = Dict{VariableRef,Vector{Float64}}()
-    for i in 1:num_inputs
+    for i = 1:num_inputs
         pairs[p[i]] = internal_load_sampler(original_load[i], num_p, i, num_inputs)
     end
-    problem_iterator = ProblemIterator(pairs; early_stop=early_stop_fn)
+    problem_iterator = ProblemIterator(pairs; early_stop = early_stop_fn)
 
     save(
         problem_iterator,
@@ -219,18 +232,19 @@ function generate_dataset_pglib(
     return solve_batch(problem_iterator, recorder),
     length(recorder.primal_variables) + length(recorder.dual_variables),
     length(original_load),
-    batch_id
+    batch_id,
+    problem_iterator
 end
 
 function generate_worst_case_dataset_Nonconvex(
     data_dir,
     case_name;
-    filetype=CSVFile,
-    num_p=10,
-    network_formulation=DCPPowerModel,
-    optimizer=() -> POI.Optimizer(HiGHS.Optimizer()),
-    algorithm=NLoptAlg(:LN_BOBYQA),
-    options=NLoptOptions(; maxeval=10),
+    filetype = CSVFile,
+    num_p = 10,
+    network_formulation = DCPPowerModel,
+    optimizer = () -> POI.Optimizer(HiGHS.Optimizer()),
+    algorithm = NLoptAlg(:LN_BOBYQA),
+    options = NLoptOptions(; maxeval = 10),
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -253,7 +267,9 @@ function generate_worst_case_dataset_Nonconvex(
         [l["qd"] for l in values(network_data["load"])],
     )
     p = load_parameter_factory(
-        model, 1:(num_loads * 2); load_set=MOI.Parameter.(original_load)
+        model,
+        1:(num_loads*2);
+        load_set = MOI.Parameter.(original_load),
     )
 
     # Define batch id
@@ -262,20 +278,25 @@ function generate_worst_case_dataset_Nonconvex(
 
     # File names
     file_input = joinpath(
-        data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id
+        data_sim_dir,
+        case_name * "_" * string(network_formulation) * "_input_" * batch_id,
     )
     file_output = joinpath(
-        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+        data_sim_dir,
+        case_name * "_" * string(network_formulation) * "_output_" * batch_id,
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=model
+        file_output;
+        filename_input = file_input,
+        primal_variables = [],
+        dual_variables = [],
+        model = model,
     )
 
     # Build model
-    model, parameters, variable_refs = pm_primal_builder!(
-        model, p, network_data, network_formulation; recorder=recorder
-    )
-    function _primal_builder!(; recorder=nothing)
+    model, parameters, variable_refs =
+        pm_primal_builder!(model, p, network_data, network_formulation; recorder = recorder)
+    function _primal_builder!(; recorder = nothing)
         if !isnothing(recorder)
             set_primal_variable!(recorder, variable_refs)
         end
@@ -296,12 +317,12 @@ function generate_worst_case_dataset_Nonconvex(
 
     # The problem iterator
     problem_iterator = WorstCaseProblemIterator(
-        [uuid1() for _ in 1:num_p], # will be ignored
+        [uuid1() for _ = 1:num_p], # will be ignored
         () -> nothing, # will be ignored
         _primal_builder!,
         _set_iterator!,
         algorithm;
-        options=options,
+        options = options,
     )
 
     # Solve all problems and record solutions
@@ -318,11 +339,11 @@ end
 function generate_worst_case_dataset(
     data_dir,
     case_name;
-    filetype=CSVFile,
-    num_p=10,
-    network_formulation=DCPPowerModel,
-    optimizer_factory=default_optimizer_factory,
-    hook=nothing,
+    filetype = CSVFile,
+    num_p = 10,
+    network_formulation = DCPPowerModel,
+    optimizer_factory = default_optimizer_factory,
+    hook = nothing,
 )
     # save folder
     data_sim_dir = joinpath(data_dir, string(network_formulation))
@@ -340,7 +361,7 @@ function generate_worst_case_dataset(
         [l["pd"] for l in values(network_data["load"])],
         [l["qd"] for l in values(network_data["load"])],
     )
-    parameter_factory = (model) -> load_parameter_factory(model, 1:(num_loads * 2))
+    parameter_factory = (model) -> load_parameter_factory(model, 1:(num_loads*2))
 
     # Define batch id
     batch_id = string(uuid1())
@@ -348,8 +369,12 @@ function generate_worst_case_dataset(
 
     # Build model
     primal_builder! =
-        (model, parameters; recorder=nothing) -> pm_primal_builder!(
-            model, parameters, network_data, network_formulation; recorder=recorder
+        (model, parameters; recorder = nothing) -> pm_primal_builder!(
+            model,
+            parameters,
+            network_data,
+            network_formulation;
+            recorder = recorder,
         )
 
     # Set iterator
@@ -359,23 +384,29 @@ function generate_worst_case_dataset(
 
     # The problem iterator
     problem_iterator = WorstCaseProblemIterator(
-        [uuid1() for _ in 1:num_p],
+        [uuid1() for _ = 1:num_p],
         parameter_factory,
         primal_builder!,
         set_iterator!,
         optimizer_factory;
-        hook=hook,
+        hook = hook,
     )
 
     # File names
     file_input = joinpath(
-        data_sim_dir, case_name * "_" * string(network_formulation) * "_input_" * batch_id
+        data_sim_dir,
+        case_name * "_" * string(network_formulation) * "_input_" * batch_id,
     )
     file_output = joinpath(
-        data_sim_dir, case_name * "_" * string(network_formulation) * "_output_" * batch_id
+        data_sim_dir,
+        case_name * "_" * string(network_formulation) * "_output_" * batch_id,
     )
     recorder = Recorder{filetype}(
-        file_output; filename_input=file_input, primal_variables=[], dual_variables=[], model=JuMP.Model() # dummy model
+        file_output;
+        filename_input = file_input,
+        primal_variables = [],
+        dual_variables = [],
+        model = JuMP.Model(), # dummy model
     )
 
     # Solve all problems and record solutions
@@ -388,9 +419,13 @@ end
 function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, num_p::Int)
     @testset "Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
-        success_solves, number_variables, number_parameters, batch_id = generate_dataset_pglib(
-            path, case_name; num_p=num_p, network_formulation=network_formulation
-        )
+        success_solves, number_variables, number_parameters, batch_id, problem_iterator =
+            generate_dataset_pglib(
+                path,
+                case_name;
+                num_p = num_p,
+                network_formulation = network_formulation,
+            )
         file_in = joinpath(
             path,
             string(network_formulation),
@@ -411,19 +446,25 @@ function test_pglib_datasetgen(path::AbstractString, case_name::AbstractString, 
         @test length(readdlm(file_out, ',')[:, 1]) == num_p * success_solves + 1
         @test length(readdlm(file_out, ',')[1, :]) == number_variables + 6
 
-        return file_in, file_out
+        return file_in, file_out, problem_iterator
     end
 end
 
 function test_generate_worst_case_dataset(
-    path::AbstractString, case_name::AbstractString, num_p::Int
+    path::AbstractString,
+    case_name::AbstractString,
+    num_p::Int,
 )
     @testset "Worst Case Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
         # Improve dataset
-        success_solves, number_variables, number_parameters, batch_id = generate_worst_case_dataset(
-            path, case_name; num_p=num_p, network_formulation=network_formulation
-        )
+        success_solves, number_variables, number_parameters, batch_id =
+            generate_worst_case_dataset(
+                path,
+                case_name;
+                num_p = num_p,
+                network_formulation = network_formulation,
+            )
 
         file_in = joinpath(
             path,
@@ -451,14 +492,20 @@ function test_generate_worst_case_dataset(
 end
 
 function test_generate_worst_case_dataset_Nonconvex(
-    path::AbstractString, case_name::AbstractString, num_p::Int
+    path::AbstractString,
+    case_name::AbstractString,
+    num_p::Int,
 )
     @testset "WC Nonconvex Dataset Generation pglib case" begin
         network_formulation = DCPPowerModel
         # Improve dataset
-        success_solves, number_variables, number_parameters, batch_id = generate_worst_case_dataset_Nonconvex(
-            path, case_name; num_p=num_p, network_formulation=network_formulation
-        )
+        success_solves, number_variables, number_parameters, batch_id =
+            generate_worst_case_dataset_Nonconvex(
+                path,
+                case_name;
+                num_p = num_p,
+                network_formulation = network_formulation,
+            )
 
         file_in = joinpath(
             path,

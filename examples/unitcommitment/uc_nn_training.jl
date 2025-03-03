@@ -6,7 +6,9 @@
 # Load Functions
 ##############
 
-import Pkg; Pkg.activate(dirname(dirname(@__DIR__))); Pkg.instantiate()
+import Pkg;
+Pkg.activate(dirname(dirname(@__DIR__)));
+Pkg.instantiate();
 
 using LearningToOptimize
 using MLJFlux
@@ -29,7 +31,7 @@ data_dir = joinpath(dirname(@__FILE__), "data")
 ##############
 # Parameters
 ##############
-filetype=ArrowFile
+filetype = ArrowFile
 case_name = ARGS[1] # case_name = "case300"
 date = ARGS[2] # date="2017-01-01"
 horizon = parse(Int, ARGS[3]) # horizon=2
@@ -41,11 +43,13 @@ data_dir = joinpath(data_dir, case_name, date, "h" * string(horizon))
 ##############
 
 # Read input and output data
-iter_input = readdir(joinpath(data_dir, "input"), join=true)
-iter_output = readdir(joinpath(data_dir, "output"), join=true)
+iter_input = readdir(joinpath(data_dir, "input"), join = true)
+iter_output = readdir(joinpath(data_dir, "output"), join = true)
 # filter for only arrow files of this case
-iter_input = [file for file in iter_input if occursin(case_name, file) && occursin("arrow", file)]
-iter_output = [file for file in iter_output if occursin(case_name, file) && occursin("arrow", file)]
+iter_input =
+    [file for file in iter_input if occursin(case_name, file) && occursin("arrow", file)]
+iter_output =
+    [file for file in iter_output if occursin(case_name, file) && occursin("arrow", file)]
 
 # Load input and output data tables
 input_tables = Array{DataFrame}(undef, length(iter_input))
@@ -62,7 +66,7 @@ input_table = vcat(input_tables...)
 output_table = vcat(output_tables...)
 
 # Separate input and output variables & ignore id time status primal_status dual_status
-train_table = innerjoin(input_table, output_table[!, [:id, :objective]]; on=:id)
+train_table = innerjoin(input_table, output_table[!, [:id, :objective]]; on = :id)
 input_features = names(train_table[!, Not([:id, :objective])])
 X = Float32.(Matrix(train_table[!, input_features]))
 y = Float32.(Matrix(train_table[!, [:objective]]))
@@ -79,22 +83,27 @@ lg = WandbLogger(
         "learning_rate" => 0.01,
         "rng" => 123,
         # "lambda" => 0.00,
-    )
+    ),
 )
 
-optimiser=ConvexRule(
-    Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+optimiser = ConvexRule(
+    Flux.Optimise.Adam(
+        get_config(lg, "learning_rate"),
+        (0.9, 0.999),
+        1.0e-8,
+        IdDict{Any,Any}(),
+    ),
 )
 
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder(layers),
-    rng=get_config(lg, "rng"),
-    epochs=5000,
-    optimiser=optimiser,
-    acceleration=CUDALibs(),
-    batch_size=get_config(lg, "batch_size"),
+    builder = FullyConnectedBuilder(layers),
+    rng = get_config(lg, "rng"),
+    epochs = 5000,
+    optimiser = optimiser,
+    acceleration = CUDALibs(),
+    batch_size = get_config(lg, "batch_size"),
     # lambda=get_config(lg, "lambda"),
-    loss=relative_rmse,
+    loss = relative_rmse,
 )
 
 # Constrols
@@ -103,18 +112,19 @@ model_dir = joinpath(dirname(@__FILE__), "models")
 mkpath(model_dir)
 
 save_control =
-    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate=3)
+    MLJIteration.skip(Save(joinpath(model_dir, save_file * ".jls")), predicate = 3)
 
-controls=[Step(2),
+controls = [
+    Step(2),
     NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
-    GL(; alpha=4.0),
+    GL(; alpha = 4.0),
     InvalidValue(),
-    TimeLimit(; t=1),
+    TimeLimit(; t = 1),
     save_control,
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
-    WithIterationsDo(update_epochs)
+    WithIterationsDo(update_epochs),
 ]
 
 # WIP
@@ -126,17 +136,17 @@ controls=[Step(2),
 # layer = mach.fitresult.fitresult[1]
 # gradient( ( _x ) -> sum(layer( _x )), X')
 
-iterated_pipe =
-    IteratedModel(model=nn,
-        controls=controls,
-        resampling=Holdout(fraction_train=0.7),
-        measure = relative_mae,
+iterated_pipe = IteratedModel(
+    model = nn,
+    controls = controls,
+    resampling = Holdout(fraction_train = 0.7),
+    measure = relative_mae,
 )
 
 # Fit model
 # clear()
 mach = machine(iterated_pipe, X, y)
-fit!(mach; verbosity=2)
+fit!(mach; verbosity = 2)
 
 # Finish the run
 close(lg)
@@ -152,4 +162,9 @@ fitted_model = mach.fitresult.fitresult[1]
 
 model_state = Flux.state(fitted_model)
 
-jldsave(joinpath(model_dir, save_file * ".jld2"); model_state=model_state, layers=layers, input_features=input_features)
+jldsave(
+    joinpath(model_dir, save_file * ".jld2");
+    model_state = model_state,
+    layers = layers,
+    input_features = input_features,
+)

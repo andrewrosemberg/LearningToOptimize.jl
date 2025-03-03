@@ -53,7 +53,7 @@ function copy_binary_constraint(::JuMP.Model, ::VariableRef, set, var_mapping)
     return nothing
 end
 function copy_binary_constraint(m_to::JuMP.Model, func::AffExpr, set, var_mapping)
-    terms_dict = JuMP.OrderedCollections.OrderedDict{VariableRef, Float64}()
+    terms_dict = JuMP.OrderedCollections.OrderedDict{VariableRef,Float64}()
     for var in keys(func.terms)
         terms_dict[var_mapping[var]] = func.terms[var]
     end
@@ -74,7 +74,7 @@ end
 # Copy objective function
 function copy_binary_objective(m_to::JuMP.Model, m_from::JuMP.Model, var_mapping::Dict)
     obj = objective_function(m_from)
-    obj2_dict = JuMP.OrderedCollections.OrderedDict{VariableRef, Float64}()
+    obj2_dict = JuMP.OrderedCollections.OrderedDict{VariableRef,Float64}()
     for var in keys(obj.terms)
         if is_binary(var)
             obj2_dict[var_mapping[var]] = obj.terms[var]
@@ -94,7 +94,7 @@ function copy_binary_model(m_from::JuMP.Model)
 end
 
 # remove binary terms
-function delete_binary_terms!(m::JuMP.Model; delete_objective=true)
+function delete_binary_terms!(m::JuMP.Model; delete_objective = true)
     if delete_objective
         obj = objective_function(m)
         for var in keys(obj.terms)
@@ -111,18 +111,19 @@ function delete_binary_terms!(m::JuMP.Model; delete_objective=true)
     for con in all_binary_constraints(m)
         delete(m, con)
     end
-    
+
     return
 end
 
-function add_deficit_constraints!(model::JuMP.Model; penalty=nothing)
+function add_deficit_constraints!(model::JuMP.Model; penalty = nothing)
     if isnothing(penalty)
         obj = objective_function(model)
         # get the highest coefficient
         penalty = maximum(abs.(values(obj.terms)))
         penalty = penalty * 1.1
     end
-    consrefs = [con for con in all_constraints(model, include_variable_in_set_constraints=false)]
+    consrefs =
+        [con for con in all_constraints(model, include_variable_in_set_constraints = false)]
     @variable(model, deficit[1:length(consrefs)])
     @variable(model, norm_deficit)
     for (i, eq) in enumerate(consrefs)
@@ -156,16 +157,17 @@ end
 
 # add cut
 function add_cut!(upper_model::JuMP.Model, cut_intercept, cut_slope, cut_point, u)
-    @constraint(upper_model, 
+    @constraint(
+        upper_model,
         upper_model[:θ] >= cut_intercept + dot(cut_slope, u .- cut_point)
     )
 end
 
 function solve_or_shuffle!(model::JuMP.Model, u, cuts_point, iteration)
     JuMP.optimize!(model)
-    
+
     if termination_status(model) != MOI.OPTIMAL
-        return rand([0;1],length(u))
+        return rand([0; 1], length(u))
     end
 
     new_point = round.(Int, value.(u))
@@ -173,14 +175,21 @@ function solve_or_shuffle!(model::JuMP.Model, u, cuts_point, iteration)
         return new_point
     end
 
-    if all(isapprox(new_point, cuts_point[j]) for j in iteration-10:iteration-1)
-        return rand([0;1],length(u))
+    if all(isapprox(new_point, cuts_point[j]) for j = iteration-10:iteration-1)
+        return rand([0; 1], length(u))
     end
 
     return new_point
 end
 
-function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, max_iter::Int=4000, atol::Real=0.1, bound::Real=0.0)
+function cutting_planes!(
+    inner_model::JuMP.Model;
+    upper_solver,
+    inner_solver,
+    max_iter::Int = 4000,
+    atol::Real = 0.1,
+    bound::Real = 0.0,
+)
     upper_model, inner_2_upper_map, cons_mapping = copy_binary_model(inner_model)
     delete_binary_terms!(inner_model)
     add_deficit_constraints!(inner_model)
@@ -194,7 +203,7 @@ function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, ma
     JuMP.optimize!(inner_model)
     cuts_intercept = [objective_value(inner_model)]
     cuts_slope = [[MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner]]
-    cuts_point = [rand([0;1],length(upper_2_inner))]
+    cuts_point = [rand([0; 1], length(upper_2_inner))]
 
     # cutting planes epigraph variable
     @variable(upper_model, θ >= bound)
@@ -209,27 +218,31 @@ function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, ma
     while i <= max_iter
         # Add cuts
         add_cut!(upper_model, cuts_intercept[i], cuts_slope[i], cuts_point[i], u)
-    
+
         # Add point to the lists
         new_point = solve_or_shuffle!(upper_model, u, cuts_point, i)
         push!(cuts_point, new_point)
         if value(θ) > bound
             bound = value(θ)
         end
-    
+
         # run inner problem
         set_binary_variables!(inner_model, u_inner, cuts_point[i+1])
         JuMP.optimize!(inner_model)
-    
+
         # Add cut to the lists
-        if termination_status(inner_model) == MOI.OPTIMAL || termination_status(inner_model) == MOI.LOCALLY_SOLVED
+        if termination_status(inner_model) == MOI.OPTIMAL ||
+           termination_status(inner_model) == MOI.LOCALLY_SOLVED
             push!(cuts_intercept, objective_value(inner_model))
-            push!(cuts_slope, [MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner])
+            push!(
+                cuts_slope,
+                [MOI.get(inner_model, POI.ParameterDual(), u_i) for u_i in u_inner],
+            )
         else
             println("Inner problem failed")
-            break;
+            break
         end
-    
+
         # test convergence
         u_bound = cuts_intercept[i+1]
         upper_bound[i] = u_bound
@@ -237,7 +250,7 @@ function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, ma
         gap[i] = abs(bound - u_bound) / u_bound
         if i > 10 && gap[i] < atol # && all([all(cuts_point[i] .== cuts_point[j]) for j in i-10:i-1])
             println("Converged")
-            break;
+            break
         else
             @info "Iteration $i" bound cuts_intercept[i]
         end
@@ -250,4 +263,3 @@ function cutting_planes!(inner_model::JuMP.Model; upper_solver, inner_solver, ma
     lower_bound = lower_bound[1:i]
     return upper_model, lower_bound, upper_bound, gap
 end
-
