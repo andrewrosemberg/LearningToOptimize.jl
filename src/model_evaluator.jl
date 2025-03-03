@@ -1,4 +1,9 @@
 
+"""
+    all_primal_variables(model::JuMP.Model)
+
+Returns all primal variables of a JuMP model.
+"""
 function all_primal_variables(model::JuMP.Model)
     return sort(
         setdiff(all_variables(model), load_parameters(model));
@@ -6,12 +11,22 @@ function all_primal_variables(model::JuMP.Model)
     )
 end
 
+"""
+    model_outputs(model::Function, problem_iterator::ProblemIterator)
+
+Returns the output of a machine learning model over a ProblemIterator dataset.
+"""
 function model_outputs(model::Function, problem_iterator::ProblemIterator)
     kys = sort(collect(keys(problem_iterator.pairs)); by = (v) -> index(v).value)
     input = hcat([problem_iterator.pairs[ky] for ky in kys]...)
     return model(input)
 end
 
+"""
+    model_outputs(mach::T, problem_iterator::ProblemIterator)
+
+Returns the output of a machine learning model over a ProblemIterator dataset.
+"""
 function model_outputs(mach::T, problem_iterator::ProblemIterator) where {T<:Machine}
     return predict(
         mach,
@@ -19,6 +34,11 @@ function model_outputs(mach::T, problem_iterator::ProblemIterator) where {T<:Mac
     )
 end
 
+""" 
+    variable_point(vals::Array{T,2}, problem_iterator::ProblemIterator, idx::Int)
+
+Returns a dictionary with the values of the variables and parameters for the idx-th problem instance.
+"""
 function variable_point(
     vals::Array{T,2},
     problem_iterator::ProblemIterator,
@@ -34,6 +54,11 @@ function variable_point(
     return dict
 end
 
+""" 
+    variable_point(vals::Tables.MatrixTable, problem_iterator::ProblemIterator, idx::Int)
+
+Returns a dictionary with the values of the variables and parameters for the idx-th problem instance.
+"""
 function variable_point(
     vals::Tables.MatrixTable,
     problem_iterator::ProblemIterator,
@@ -87,7 +112,12 @@ function feasibility_evaluator(problem_iterator::ProblemIterator, output)
     end
     return average_infeasilibity
 end
+    
+"""
+    _objective_value(model::JuMP.Model, point::Dict{VariableRef,Float64})
 
+Objective value of a solution over a JuMP model.
+"""
 function _objective_value(model::JuMP.Model, point::Dict{VariableRef,Float64})
     obj_function = JuMP.objective_function(model)
     return value((v) -> point[v], obj_function)
