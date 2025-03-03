@@ -20,7 +20,7 @@ termination_status_filter(status) = in(status, ACCEPTED_TERMINATION_STATUSES)
 primal_status_filter(status) = in(status, DECISION_STATUS)
 dual_status_filter(status) = in(status, DECISION_STATUS)
 
-function filter_fn(model; check_primal=true, check_dual=true)
+function filter_fn(model; check_primal = true, check_dual = true)
     if !termination_status_filter(termination_status(model))
         return false
     elseif check_primal && !primal_status_filter(primal_status(model))
@@ -46,11 +46,11 @@ mutable struct Recorder{T<:FileType}
 
     function Recorder{T}(
         filename::String;
-        filename_input::String=filename * "_input_",
-        primal_variables=[],
-        dual_variables=[],
-        filterfn=filter_fn,
-        model= if length(primal_variables) > 0
+        filename_input::String = filename * "_input_",
+        primal_variables = [],
+        dual_variables = [],
+        filterfn = filter_fn,
+        model = if length(primal_variables) > 0
             owner_model(primal_variables[1])
         elseif length(dual_variables) > 0
             owner_model(dual_variables[1])
@@ -78,10 +78,10 @@ get_filterfn(recorder::Recorder) = recorder.filterfn
 function similar(recorder::Recorder{T}) where {T<:FileType}
     return Recorder{T}(
         filename(recorder);
-        filename_input=filename_input(recorder),
-        primal_variables=get_primal_variables(recorder),
-        dual_variables=get_dual_variables(recorder),
-        filterfn=get_filterfn(recorder),
+        filename_input = filename_input(recorder),
+        primal_variables = get_primal_variables(recorder),
+        dual_variables = get_dual_variables(recorder),
+        filterfn = get_filterfn(recorder),
     )
 end
 
@@ -94,7 +94,7 @@ function set_dual_variable!(recorder::Recorder, p::Vector)
 end
 
 function set_model!(recorder::Recorder)
-    recorder.model= if length(recorder.primal_variables) > 0
+    recorder.model = if length(recorder.primal_variables) > 0
         owner_model(recorder.primal_variables[1])
     elseif length(recorder.dual_variables) > 0
         owner_model(recorder.dual_variables[1])
@@ -128,9 +128,9 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
     function ProblemIterator(
         ids::Vector{UUID},
         pairs::Dict{VariableRef,Vector{T}},
-        early_stop::Function=(args...) -> false,
-        param_type::Type{<:AbstractParameterType}=POIParamaterType,
-        pre_solve_hook::Function=(args...) -> nothing
+        early_stop::Function = (args...) -> false,
+        param_type::Type{<:AbstractParameterType} = POIParamaterType,
+        pre_solve_hook::Function = (args...) -> nothing,
     ) where {T<:Real}
         model = JuMP.owner_model(first(keys(pairs)))
         for (p, val) in pairs
@@ -141,10 +141,11 @@ struct ProblemIterator{T<:Real} <: AbstractProblemIterator
 end
 
 function ProblemIterator(
-    pairs::Dict{VariableRef,Vector{T}}; early_stop::Function=(args...) -> false,
-    pre_solve_hook::Function=(args...) -> nothing,
-    param_type::Type{<:AbstractParameterType}=POIParamaterType,
-    ids = [uuid1() for _ in 1:length(first(values(pairs)))]
+    pairs::Dict{VariableRef,Vector{T}};
+    early_stop::Function = (args...) -> false,
+    pre_solve_hook::Function = (args...) -> nothing,
+    param_type::Type{<:AbstractParameterType} = POIParamaterType,
+    ids = [uuid1() for _ = 1:length(first(values(pairs)))],
 ) where {T<:Real}
     return ProblemIterator(ids, pairs, early_stop, param_type, pre_solve_hook)
 end
@@ -155,10 +156,12 @@ end
 Save optimization problem instances to a file.
 """
 function save(
-    problem_iterator::AbstractProblemIterator, filename::AbstractString, file_type::Type{T}
+    problem_iterator::AbstractProblemIterator,
+    filename::AbstractString,
+    file_type::Type{T},
 ) where {T<:FileType}
-    kys = sort(collect(keys(problem_iterator.pairs)); by=(v) -> index(v).value)
-    df = (; id=problem_iterator.ids,)
+    kys = sort(collect(keys(problem_iterator.pairs)); by = (v) -> index(v).value)
+    df = (; id = problem_iterator.ids,)
     df = merge(df, (; zip(Symbol.(kys), [problem_iterator.pairs[ky] for ky in kys])...))
     save(df, filename, file_type)
     return nothing
@@ -176,7 +179,7 @@ function _dataframe_to_dict(df::DataFrame, parameters::Vector{VariableRef})
                 return nothing
             end
             parameter = parameters[idx]
-            push!(pairs, parameter => df[!,ky])
+            push!(pairs, parameter => df[!, ky])
         end
     end
     return pairs
@@ -190,10 +193,13 @@ function _dataframe_to_dict(df::DataFrame, model_file::AbstractString)
     return _dataframe_to_dict(df, parameters)
 end
 
-function load(model_file::AbstractString, input_file::AbstractString, ::Type{T}; 
-    batch_size::Union{Nothing, Integer}=nothing,
-    ignore_ids::Vector{UUID}=UUID[],
-    param_type::Type{<:AbstractParameterType}=JuMPParameterType
+function load(
+    model_file::AbstractString,
+    input_file::AbstractString,
+    ::Type{T};
+    batch_size::Union{Nothing,Integer} = nothing,
+    ignore_ids::Vector{UUID} = UUID[],
+    param_type::Type{<:AbstractParameterType} = JuMPParameterType,
 ) where {T<:FileType}
     # Load full set
     df = load(input_file, T)
@@ -210,13 +216,17 @@ function load(model_file::AbstractString, input_file::AbstractString, ::Type{T};
     # No batch
     if isnothing(batch_size)
         pairs = _dataframe_to_dict(df, model_file)
-        return ProblemIterator(pairs; ids=ids, param_type=param_type)
+        return ProblemIterator(pairs; ids = ids, param_type = param_type)
     end
     # Batch
     num_batches = ceil(Int, length(ids) / batch_size)
-    idx_range = (i) -> (i-1)*batch_size+1:min(i*batch_size, length(ids))
-    return (i) -> ProblemIterator(_dataframe_to_dict(df[idx_range(i), :], model_file);
-        ids=ids[idx_range(i)], param_type=param_type), num_batches
+    idx_range = (i) -> (i-1)*batch_size+1:min(i * batch_size, length(ids))
+    return (i) -> ProblemIterator(
+        _dataframe_to_dict(df[idx_range(i), :], model_file);
+        ids = ids[idx_range(i)],
+        param_type = param_type,
+    ),
+    num_batches
 end
 
 """
@@ -241,7 +251,12 @@ end
 
 Update the values of parameters in a JuMP model.
 """
-function update_model!(model::JuMP.Model, pairs::Dict, idx::Integer, param_type::Type{<:AbstractParameterType})
+function update_model!(
+    model::JuMP.Model,
+    pairs::Dict,
+    idx::Integer,
+    param_type::Type{<:AbstractParameterType},
+)
     for (p, val) in pairs
         update_model!(param_type, model, p, val[idx])
     end
@@ -253,7 +268,9 @@ end
 Solve an optimization problem and record the solution.
 """
 function solve_and_record(
-    problem_iterator::ProblemIterator, recorder::Recorder, idx::Integer
+    problem_iterator::ProblemIterator,
+    recorder::Recorder,
+    idx::Integer,
 )
     model = problem_iterator.model
     problem_iterator.pre_solve_hook(model)
@@ -275,7 +292,7 @@ Solve a batch of optimization problems and record the solutions.
 """
 function solve_batch(problem_iterator::AbstractProblemIterator, recorder)
     successfull_solves = 0.0
-    for idx in 1:length(problem_iterator.ids)
+    for idx = 1:length(problem_iterator.ids)
         _success_bool, early_stop_bool = solve_and_record(problem_iterator, recorder, idx)
         if _success_bool == 1
             successfull_solves += 1

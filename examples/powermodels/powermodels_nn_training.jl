@@ -43,12 +43,14 @@ end
 iter_files_in = readdir(joinpath(case_file_path_input))
 iter_files_in = filter(x -> occursin(string(filetype), x), iter_files_in)
 file_ins = [
-    joinpath(case_file_path_input, file) for file in iter_files_in if occursin("input", file)
+    joinpath(case_file_path_input, file) for
+    file in iter_files_in if occursin("input", file)
 ]
 iter_files_out = readdir(joinpath(case_file_path_output))
 iter_files_out = filter(x -> occursin(string(filetype), x), iter_files_out)
 file_outs = [
-    joinpath(case_file_path_output, file) for file in iter_files_out if occursin("output", file)
+    joinpath(case_file_path_output, file) for
+    file in iter_files_out if occursin("output", file)
 ]
 # batch_ids = [split(split(file, "_")[end], ".")[1] for file in file_ins]
 
@@ -66,10 +68,10 @@ input_data = DataFrame(input_table_train)
 output_data = DataFrame(output_table_train)
 
 # filter out rows with 0.0 operational_cost (i.e. inidicative of numerical issues)
-output_data = output_data[output_data.operational_cost .> 10, :]
+output_data = output_data[output_data.operational_cost.>10, :]
 
 # match
-train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
+train_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on = :id)
 
 input_features = names(train_table[!, Not([:id, :operational_cost])])
 
@@ -92,13 +94,23 @@ lg = WandbLogger(
         "rng" => 123,
         "network_formulation" => network_formulation,
         # "lambda" => 0.00,
-    )
+    ),
 )
 
-optimiser= Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+optimiser = Flux.Optimise.Adam(
+    get_config(lg, "learning_rate"),
+    (0.9, 0.999),
+    1.0e-8,
+    IdDict{Any,Any}(),
+)
 if icnn
-    optimiser=ConvexRule(
-        Flux.Optimise.Adam(get_config(lg, "learning_rate"), (0.9, 0.999), 1.0e-8, IdDict{Any,Any}())
+    optimiser = ConvexRule(
+        Flux.Optimise.Adam(
+            get_config(lg, "learning_rate"),
+            (0.9, 0.999),
+            1.0e-8,
+            IdDict{Any,Any}(),
+        ),
     )
 end
 
@@ -114,14 +126,14 @@ end
 # )
 
 nn = MultitargetNeuralNetworkRegressor(;
-    builder=FullyConnectedBuilder(layers),
-    rng=get_config(lg, "rng"),
-    epochs=5000,
-    optimiser=optimiser,
-    acceleration=CUDALibs(),
-    batch_size=get_config(lg, "batch_size"),
+    builder = FullyConnectedBuilder(layers),
+    rng = get_config(lg, "rng"),
+    epochs = 5000,
+    optimiser = optimiser,
+    acceleration = CUDALibs(),
+    batch_size = get_config(lg, "batch_size"),
     # lambda=get_config(lg, "lambda"),
-    loss=relative_rmse,
+    loss = relative_rmse,
 )
 
 # Constrols
@@ -136,30 +148,31 @@ model_path = joinpath(model_dir, save_file * ".jld2")
 
 save_control = SaveBest(1000, model_path, 0.003)
 
-controls=[Step(1),
-    WithModelLossDo(save_control; stop_if_true=true),
+controls = [
+    Step(1),
+    WithModelLossDo(save_control; stop_if_true = true),
     # NumberLimit(n=4),
     # NumberSinceBest(6),
     # PQ(; alpha=0.9, k=30),
     # GL(; alpha=4.0),
     InvalidValue(),
     # Threshold(0.003),
-    TimeLimit(; t=3),
+    TimeLimit(; t = 3),
     WithLossDo(update_loss),
     WithReportDo(update_training_loss),
-    WithIterationsDo(update_epochs)
+    WithIterationsDo(update_epochs),
 ]
 
-iterated_pipe =
-    IteratedModel(model=nn,
-        controls=controls,
-        # resampling=Holdout(fraction_train=0.7),
-        measure = relative_mae,
+iterated_pipe = IteratedModel(
+    model = nn,
+    controls = controls,
+    # resampling=Holdout(fraction_train=0.7),
+    measure = relative_mae,
 )
 
 # Fit model
 mach = machine(iterated_pipe, X, y)
-fit!(mach; verbosity=2)
+fit!(mach; verbosity = 2)
 
 # Finish the run
 close(lg)

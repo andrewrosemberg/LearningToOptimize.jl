@@ -30,12 +30,14 @@ save_file = "$(case_name)_$(network_formulation)"
 iter_files_in = readdir(joinpath(case_file_path_input))
 iter_files_in = filter(x -> occursin(string(filetype), x), iter_files_in)
 file_ins = [
-    joinpath(case_file_path_input, file) for file in iter_files_in if occursin("input", file)
+    joinpath(case_file_path_input, file) for
+    file in iter_files_in if occursin("input", file)
 ]
 iter_files_out = readdir(joinpath(case_file_path_output))
 iter_files_out = filter(x -> occursin(string(filetype), x), iter_files_out)
 file_outs = [
-    joinpath(case_file_path_output, file) for file in iter_files_out if occursin("output", file)
+    joinpath(case_file_path_output, file) for
+    file in iter_files_out if occursin("output", file)
 ]
 
 # Load input and output data tables
@@ -52,10 +54,10 @@ input_data = DataFrame(input_table_train)
 output_data = DataFrame(output_table_train)
 
 # filter out rows with 0.0 operational_cost (i.e. inidicative of numerical issues)
-output_data = output_data[output_data.operational_cost .> 10, :]
+output_data = output_data[output_data.operational_cost.>10, :]
 
 # match
-test_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on=:id)
+test_table = innerjoin(input_data, output_data[!, [:id, :operational_cost]]; on = :id)
 
 ##############
 # Load DNN Approximator
@@ -102,8 +104,8 @@ std_out_convex_hull = Array{Float32}(undef, length(flux_models))
 
 for (i, flux_model) in enumerate(flux_models)
     error_vec = (y .- flux_model(X')') ./ y
-    error_vec_in_chull = error_vec[test_table.in_train_convex_hull .== 1]
-    error_vec_out_chull = error_vec[test_table.in_train_convex_hull .== 0]
+    error_vec_in_chull = error_vec[test_table.in_train_convex_hull.==1]
+    error_vec_out_chull = error_vec[test_table.in_train_convex_hull.==0]
     mae_convex_hull[i] = mean(abs.(error_vec_in_chull))
     mae_out_convex_hull[i] = mean(abs.(error_vec_out_chull))
     worst_case_convex_hull[i] = maximum(abs.(error_vec_in_chull))

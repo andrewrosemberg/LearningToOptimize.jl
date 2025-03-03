@@ -1,7 +1,7 @@
 using Nonconvex
 
 # Nonconvex needs a minimization objective function that only receives the decision vector.
-function primal_objective(parameter_values, parameters, filter_fn; penalty=1e8)
+function primal_objective(parameter_values, parameters, filter_fn; penalty = 1e8)
     model = owner_model(first(parameters))
     for (i, p) in enumerate(parameters)
         update_model!(model, p, parameter_values[i])
@@ -30,7 +30,7 @@ function save_input(parameters, _recorder, id)
     recorder = similar(_recorder)
     set_primal_variable!(recorder, parameters)
     set_dual_variable!(recorder, [])
-    record(recorder, id; input=true)
+    record(recorder, id; input = true)
     return nothing
 end
 
@@ -66,17 +66,15 @@ function solve_and_record(
     problem_iterator::WorstCaseProblemIterator{T},
     recorder::Recorder,
     idx::Integer;
-    maxiter=1000,
+    maxiter = 1000,
 ) where {T<:NonconvexCore.AbstractOptimizer}
     # Build Primal
-    model, parameters = problem_iterator.primal_builder!(; recorder=recorder)
-    (min_demands, max_demands, max_total_volume, starting_point) = problem_iterator.set_iterator!(
-        idx
-    )
+    model, parameters = problem_iterator.primal_builder!(; recorder = recorder)
+    (min_demands, max_demands, max_total_volume, starting_point) =
+        problem_iterator.set_iterator!(idx)
 
-    storage_objective_function = StorageCallbackObjective(
-        parameters, recorder.filterfn, recorder
-    )
+    storage_objective_function =
+        StorageCallbackObjective(parameters, recorder.filterfn, recorder)
 
     if haskey(problem_iterator.ext, :best_solution)
         starting_point = problem_iterator.ext[:best_solution]
@@ -84,7 +82,7 @@ function solve_and_record(
 
     # Build Nonconvex optimization model:
     model_non = Nonconvex.Model()
-    set_objective!(model_non, storage_objective_function; flags=[:expensive])
+    set_objective!(model_non, storage_objective_function; flags = [:expensive])
     addvar!(model_non, min_demands, max_demands)
     # add_ineq_constraint!(model_non, x -> sum(x .^ 2) - max_total_volume ^ 2)
 
@@ -94,7 +92,7 @@ function solve_and_record(
             model_non,
             problem_iterator.optimizer,
             starting_point;
-            options=problem_iterator.options,
+            options = problem_iterator.options,
         )
     else
         optimize(model_non, problem_iterator.optimizer, starting_point)

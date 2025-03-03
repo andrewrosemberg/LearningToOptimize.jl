@@ -5,7 +5,7 @@ using NonconvexNLopt
 
 Test dataset generation using the worst case problem iterator for different filetypes.
 """
-function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
+function test_worst_case_problem_iterator(path::AbstractString, num_p = 10)
     @testset "Worst Case Dual Generation Type: $filetype" for filetype in
                                                               [CSVFile, ArrowFile]
         # The problem to iterate over
@@ -13,7 +13,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
             return () -> Ipopt.Optimizer()
         end
         parameter_factory = (model) -> [@variable(model, _p)]
-        function primal_builder!(model, parameters; recorder=nothing)
+        function primal_builder!(model, parameters; recorder = nothing)
             @variable(model, x)
             @constraint(model, cons, x + parameters[1] >= 3)
             @objective(model, Min, 2x)
@@ -30,7 +30,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         end
 
         problem_iterator = WorstCaseProblemIterator(
-            [uuid1() for _ in 1:num_p],
+            [uuid1() for _ = 1:num_p],
             parameter_factory,
             primal_builder!,
             set_iterator!,
@@ -50,7 +50,10 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
+            file_output;
+            filename_input = file_input,
+            primal_variables = [model[:x]],
+            dual_variables = [],
         )
 
         # Solve all problems and record solutions
@@ -96,7 +99,7 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
     @testset "Worst Case NonConvex Generation Type: $filetype" for filetype in
                                                                    [CSVFile, ArrowFile]
-        function _primal_builder!(; recorder=nothing)
+        function _primal_builder!(; recorder = nothing)
             model = JuMP.Model(() -> POI.Optimizer(HiGHS.Optimizer()))
             parameters = @variable(model, _p in MOI.Parameter(1.0))
             @variable(model, x)
@@ -120,12 +123,12 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
         end
 
         problem_iterator = WorstCaseProblemIterator(
-            [uuid1() for _ in 1:num_p], # will be ignored
+            [uuid1() for _ = 1:num_p], # will be ignored
             () -> nothing, # will be ignored
             _primal_builder!,
             _set_iterator!,
             NLoptAlg(:LN_BOBYQA);
-            options=NLoptOptions(; maxeval=10),
+            options = NLoptOptions(; maxeval = 10),
         )
 
         # Test Build Primal
@@ -138,7 +141,10 @@ function test_worst_case_problem_iterator(path::AbstractString, num_p=10)
 
         # The recorder
         recorder = Recorder{filetype}(
-            file_output; filename_input=file_input, primal_variables=[model[:x]], dual_variables=[]
+            file_output;
+            filename_input = file_input,
+            primal_variables = [model[:x]],
+            dual_variables = [],
         )
 
         # Solve all problems and record solutions
@@ -186,10 +192,6 @@ end
 ####### Run Tests
 path = mktempdir()
 test_worst_case_problem_iterator(path)
-file_in, file_out = test_generate_worst_case_dataset(
-    path, "pglib_opf_case5_pjm", 20
-)
-file_in, file_out = test_generate_worst_case_dataset_Nonconvex(
-    path, "pglib_opf_case5_pjm", 20
-)
-
+file_in, file_out = test_generate_worst_case_dataset(path, "pglib_opf_case5_pjm", 20)
+file_in, file_out =
+    test_generate_worst_case_dataset_Nonconvex(path, "pglib_opf_case5_pjm", 20)

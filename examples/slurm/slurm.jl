@@ -7,10 +7,10 @@ If you get an error make sure to Pkg.checkout("CluterManagers").
 
 try
 
-	using Distributed, ClusterManagers
+    using Distributed, ClusterManagers
 catch
-	Pkg.add("ClusterManagers")
-	Pkg.checkout("ClusterManagers")
+    Pkg.add("ClusterManagers")
+    Pkg.checkout("ClusterManagers")
 end
 
 using Distributed, ClusterManagers

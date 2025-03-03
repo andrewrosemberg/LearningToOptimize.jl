@@ -40,9 +40,7 @@ mkpath(joinpath(data_dir, "output"))
 ##############
 # Load Instance
 ##############
-instance = UnitCommitment.read_benchmark(
-    joinpath("matpower", case_name, date),
-)
+instance = UnitCommitment.read_benchmark(joinpath("matpower", case_name, date))
 instance.time = horizon
 
 ##############
@@ -51,34 +49,46 @@ instance.time = horizon
 
 if solve_nominal
     model = build_model_uc(instance)
-    uc_bnb_dataset(instance, save_file; data_dir=data_dir, model=model)
+    uc_bnb_dataset(instance, save_file; data_dir = data_dir, model = model)
     if num_random > 0
-        uc_random_dataset!(instance, save_file; data_dir=data_dir, model=model, num_s=num_random)
+        uc_random_dataset!(
+            instance,
+            save_file;
+            data_dir = data_dir,
+            model = model,
+            num_s = num_random,
+        )
     end
 end
 
 # save nominal loads in a dictionary
 nominal_loads = Dict()
-for i in 1:length(instance.buses)
+for i = 1:length(instance.buses)
     bus = instance.buses[i]
     nominal_loads[i] = bus.load[1:horizon]
 end
 
-@sync @distributed for i in 1:num_batches
+@sync @distributed for i = 1:num_batches
     rng = MersenneTwister(round(Int, i * time()))
     instance_ = deepcopy(instance)
     uc_load_disturbances!(rng, instance_, nominal_loads)
     # perturbed loads
     perturbed_loads_sum = 0.0
-    for i in 1:length(instance_.buses)
+    for i = 1:length(instance_.buses)
         bus = instance_.buses[i]
         perturbed_loads_sum += sum(bus.load)
     end
     @info "Solving batch $i" rng perturbed_loads_sum
     model = build_model_uc(instance_)
-    uc_bnb_dataset(instance_, save_file; data_dir=data_dir, model=model)
+    uc_bnb_dataset(instance_, save_file; data_dir = data_dir, model = model)
     if num_random > 0
-        uc_random_dataset!(instance_, save_file; data_dir=data_dir, model=model, num_s=num_random)
+        uc_random_dataset!(
+            instance_,
+            save_file;
+            data_dir = data_dir,
+            model = model,
+            num_s = num_random,
+        )
     end
 end
 
