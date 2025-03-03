@@ -6,7 +6,7 @@
     </div>
 </div>
 
-Learning to optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for parametric optimization problems.
+Learning to Optimize (LearningToOptimize) package that provides basic functionalities to help fit proxy models for parametric optimization problems.
 
 Have a look at our sister [HugginFace Organization](https://huggingface.co/LearningToOptimize), for datasets, pre-trained models and benchmarks.
 
@@ -21,7 +21,7 @@ Have a look at our sister [HugginFace Organization](https://huggingface.co/Learn
 
 # Background
 
-Parametric optimization problems arise in scenarios where certain elements (e.g., coefficients, constraints) may vary according to problem parameters. A general form of a parameterized convex optimization problem is 
+Parametric optimization problems arise when certain elements (e.g., coefficients, constraints) may vary according to problem parameters. A general form of a parameterized convex optimization problem is 
 
 $$
 \begin{aligned}
@@ -31,11 +31,11 @@ $$
 \end{aligned}
 $$
 
-where $ \theta $ is the parameter.
+where $\theta$ is the parameter.
 
-**Learning to Optimize (L2O)** is an emerging paradigm where machine learning models *learn* to solve optimization problems efficiently. This approach is also known as using **optimization proxies** or **amortized optimization**. 
+**Learning to Optimize (L2O)** is an emerging paradigm where machine learning models *learn* to solve optimization problems efficiently. This approach is also known as **optimization proxies** or **amortized optimization**. 
 
-In more technical terms, **amortized optimization** seeks to learn a function \\( f_\theta(x) \\) that maps problem parameters \\( x \\) to solutions \\( y \\) that (approximately) minimize a given objective function subject to constraints. Modern methods leverage techniques like **differentiable optimization layers**, **input-convex neural networks**, or constraint-enforcing architectures (e.g., [DC3](https://openreview.net/pdf?id=0Ow8_1kM5Z)) to ensure that the learned proxy solutions are both feasible and performant. By coupling the solver and the model in an **end-to-end** pipeline, these approaches let the training objective directly reflect downstream metrics, improving speed and reliability.
+In more technical terms, **amortized optimization** seeks to learn a function $f_\theta(x)$ that maps problem parameters $x$ to solutions $y$ that (approximately) minimize a given objective function subject to constraints. Modern methods leverage techniques like **differentiable optimization layers**, **input-convex neural networks**, or constraint-enforcing architectures (e.g., [DC3](https://openreview.net/pdf?id=0Ow8_1kM5Z)) to ensure that the learned proxy solutions are both feasible and performant. By coupling the solver and the model in an **end-to-end** pipeline, these approaches let the training objective directly reflect downstream metrics, improving speed and reliability.
 
 Recent advances also focus on **trustworthy** or **certifiable** proxies, where constraint satisfaction or performance bounds are guaranteed. This is crucial in domains like energy systems or manufacturing, where infeasible solutions can have large penalties or safety concerns. Overall, learning-based optimization frameworks aim to combine the advantages of ML (data-driven generalization) with the rigor of mathematical programming (constraint handling and optimality).
 
@@ -100,7 +100,7 @@ problem_iterator = load("input_file.csv", CSVFile)
 
 ### Samplers
 
-Instead of defining parameter instances manually, one may sample parameter values using pre-defined samplers - e.g. `scaled_distribution_sampler`, `box_sampler`- or define their own sampler. Samplers are functions that take a vector of parameter of type `MOI.Parameter` and return a matrix of parameter values.
+Instead of defining parameter instances manually, one may sample parameter values using pre-defined samplers - e.g. `scaled_distribution_sampler`, `box_sampler`- or define their own sampler. Samplers are functions that take a vector of parameters of type `MOI.Parameter` and return a matrix of parameter values.
 
 The easiest way to go from problem definition, sampling parameter values and saving them is to use the `general_sampler` function: 
 
@@ -120,7 +120,7 @@ It loads the underlying model from a passed `file` that works with JuMP's `read_
 
 ### The Recorder
 
-Then chose what values to record:
+Then choose what values to record:
 
 ```julia
 # CSV recorder to save the optimal primal and dual decision values
@@ -155,7 +155,7 @@ recorder = Recorder{ArrowFile}("output_file.arrow", primal_variables=[x], dual_v
 
 ## Learning proxies
 
-In order to train models to be able to forecast optimization solutions from parameter values, one option is to use the package Flux.jl:
+To train models to be able to forecast optimization solutions from parameter values, one option is to use the package Flux.jl:
 
 ```julia
 using CSV, DataFrames, Flux
