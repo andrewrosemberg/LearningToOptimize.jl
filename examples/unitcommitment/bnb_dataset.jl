@@ -279,9 +279,7 @@ function uc_random_dataset!(
     # Parameter values
     u_values =
         abs.(
-            Matrix(
-                hcat([sprandn(length(u_inner), 1, non_zero_units) for i = 1:num_s]...)',
-            )
+            Matrix(hcat([sprandn(length(u_inner), 1, non_zero_units) for i = 1:num_s]...)')
         )
     u_values = min.(u_values, 1.0)
     units_on = sum(u_values, dims = 1)

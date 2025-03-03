@@ -26,7 +26,7 @@ Learning to optimize (LearningToOptimize) package that provides basic functional
 
 # Flowchart Summary
 
-![flowchart](assets/L2O.png)
+![flowchart](docs/src/assets/L2O.png)
 
 ## Generate Dataset
 This package provides a basic way of generating a dataset of the solutions of an optimization problem by varying the values of the parameters in the problem and recording it.
@@ -71,7 +71,33 @@ Which creates the following CSV:
 |  9 | 9.0 |
 | 10 | 10.0|
 
-ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs. 
+ps.: For illustration purpose, I have represented the id's here as integers, but in reality they are generated as UUIDs.
+
+To load the parameter values back:
+
+```julia
+problem_iterator = load("input_file.csv", CSVFile)
+```
+
+### Samplers
+
+Instead of defining parameter instances manually, one may sample parameter values using pre-defined samplers - e.g. `scaled_distribution_sampler`, `box_sampler`- or define their own sampler. Samplers are functions that take a vector of parameter of type `MOI.Parameter` and return a matrix of parameter values.
+
+The easiest way to go from problem definition, sampling parameter values and saving them is to use the `general_sampler` function: 
+
+```julia
+general_sampler(
+    "examples/powermodels/data/6468_rte/6468_rte_SOCWRConicPowerModel_POI_load.mof.json";
+    samplers = [
+        (original_parameters) -> scaled_distribution_sampler(original_parameters, 10000),
+        (original_parameters) -> line_sampler(original_parameters, 1.01:0.01:1.25),
+        (original_parameters) -> box_sampler(original_parameters, 300),
+    ],
+)
+```
+
+This function is a general sampler that uses a set of samplers to sample the parameter space. 
+It loads the underlying model from a passed `file` that works with JuMP's `read_from_file` (ps.: currently only tested with `MathOptFormat`), samples the parameters and saves the sampled parameters to `save_file`.
 
 ### The Recorder
 
@@ -113,13 +139,15 @@ recorder = Recorder{ArrowFile}("output_file.arrow", primal_variables=[x], dual_v
 In order to train models to be able to forecast optimization solutions from parameter values, one option is to use the package Flux.jl:
 
 ```julia
+using CSV, DataFrames, Flux
+
 # read input and output data
 input_data = CSV.read("input_file.csv", DataFrame)
 output_data = CSV.read("output_file.csv", DataFrame)
 
 # Separate input and output variables
-output_variables = output_data[!, Not(:id)]
-input_features = innerjoin(input_data, output_data[!, [:id]], on = :id)[!, Not(:id)] # just use success solves
+output_variables = output_data[!, Not([:id, :status, :primal_status, :dual_status, :objective, :time])] # just predict solutions
+input_features = innerjoin(input_data, output_data[!, [:id]]; on=:id)[!, Not(:id)] # just use success solves
 
 # Define model
 model = Chain(
@@ -145,18 +173,40 @@ Flux.train!(loss, Flux.params(model), [(input_features, output_variables)], opti
 predictions = model(input_features)
 ```
 
+Another option is to use the package MLJ.jl:
+
+```julia
+using MLJ
+
+# Define the model
+model = MultitargetNeuralNetworkRegressor(;
+    builder=FullyConnectedBuilder([64, 32]),
+    rng=123,
+    epochs=20,
+    optimiser=Optimisers.Adam(),
+)
+
+# Train the model
+mach = machine(model, input_features, output_variables)
+fit!(mach; verbosity=2)
+
+# Make predictions
+predict(mach, input_features)
+
+```
+
+### Evaluating the ML model
+
+For ease of use, we built a general evaluator that can be used to evaluate the model.
+It will return a `NamedTuple` with the objective value and infeasibility of the 
+predicted solution for each instance, and the overall inference time and allocated memory.
+
+```julia
+evaluation = general_evaluator(problem_iterator, mach)
+```
+
 ## Coming Soon
 
 Future features:
  - ML objectives that penalize infeasible predictions;
  - Warm-start from predicted solutions.
-
-
-<!-- ```@index
-
-``` -->
-
-
-<!-- ```@autodocs
-Modules = [LearningToOptimize]
-``` -->

@@ -72,11 +72,23 @@ problem_iterator = load("input_file.csv", CSVFile)
 
 ### Samplers
 
-The user may sample the parameter values using pre-defined samplers:
+Instead of defining parameter instances manually, one may sample parameter values using pre-defined samplers - e.g. `scaled_distribution_sampler`, `box_sampler`- or define their own sampler. Samplers are functions that take a vector of parameter of type `MOI.Parameter` and return a matrix of parameter values.
+
+The easiest way to go from problem definition, sampling parameter values and saving them is to use the `general_sampler` function: 
 
 ```julia
-
+general_sampler(
+    "examples/powermodels/data/6468_rte/6468_rte_SOCWRConicPowerModel_POI_load.mof.json";
+    samplers = [
+        (original_parameters) -> scaled_distribution_sampler(original_parameters, 10000),
+        (original_parameters) -> line_sampler(original_parameters, 1.01:0.01:1.25),
+        (original_parameters) -> box_sampler(original_parameters, 300),
+    ],
+)
 ```
+
+This function is a general sampler that uses a set of samplers to sample the parameter space. 
+It loads the underlying model from a passed `file` that works with JuMP's `read_from_file` (ps.: currently only tested with `MathOptFormat`), samples the parameters and saves the sampled parameters to `save_file`.
 
 ### The Recorder
 
@@ -174,7 +186,7 @@ predict(mach, input_features)
 
 ```
 
-### Evaluating the model is easy
+### Evaluating the ML model
 
 For ease of use, we built a general evaluator that can be used to evaluate the model.
 It will return a `NamedTuple` with the objective value and infeasibility of the 
